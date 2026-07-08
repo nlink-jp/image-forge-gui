@@ -201,7 +201,8 @@ struct InspectorBar: View {
                     if let seed = image.seed {
                         Text("seed \(seed)").font(.caption).foregroundStyle(.secondary)
                     }
-                    if let w = image.params.width, let h = image.params.height {
+                    if let w = image.pixelWidth ?? image.params.width,
+                       let h = image.pixelHeight ?? image.params.height {
                         Text("\(w)×\(h)").font(.caption).foregroundStyle(.secondary)
                     }
                     Text(image.url.lastPathComponent)
@@ -336,7 +337,8 @@ struct LightboxView: View {
                 .frame(maxWidth: 720)
             HStack(spacing: 12) {
                 if let s = img.seed { Text("seed \(s)") }
-                if let w = img.params.width, let h = img.params.height { Text("\(w)×\(h)") }
+                if let w = img.pixelWidth ?? img.params.width,
+                   let h = img.pixelHeight ?? img.params.height { Text("\(w)×\(h)") }
                 Text("\(i + 1) / \(images.count)")
             }
             .font(.caption)

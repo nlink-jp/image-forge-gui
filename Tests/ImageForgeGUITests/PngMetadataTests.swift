@@ -141,4 +141,22 @@ final class PngMetadataTests: XCTestCase {
         XCTAssertNotNil(meta?.prompt, "should recover the prompt")
         XCTAssertNotNil(meta?.seed, "should recover the seed")
     }
+
+    /// pixelSize reads the true dimensions from IHDR (independent of any text
+    /// metadata) — this is what the gallery shows after hires / upscale.
+    func testPixelSizeFromIHDR() {
+        var bytes: [UInt8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A] // signature
+        bytes += [0, 0, 0, 13]           // IHDR length
+        bytes += Array("IHDR".utf8)      // chunk type
+        bytes += [0, 0, 0x06, 0x00]      // width  = 1536
+        bytes += [0, 0, 0x0C, 0x00]      // height = 3072
+        let size = PngMetadata.pixelSize(Data(bytes))
+        XCTAssertEqual(size?.width, 1536)
+        XCTAssertEqual(size?.height, 3072)
+    }
+
+    func testPixelSizeRejectsNonPNG() {
+        XCTAssertNil(PngMetadata.pixelSize(Data([0, 1, 2, 3])))
+        XCTAssertNil(PngMetadata.pixelSize(Data()))
+    }
 }

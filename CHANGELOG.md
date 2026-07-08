@@ -24,6 +24,12 @@ Completes the two features left stubbed in v0.1.0: img2img and gallery upscale.
   concurrent Metal loads on the 16 GB baseline; the status bar shows a spinner.
 - Tests: `ServeClient.upscaleArgs` argument building.
 
+### Fixed
+- The gallery now shows each image's **actual pixel dimensions** (read from the
+  PNG `IHDR` chunk) instead of the *requested* width/height from the embedded
+  text metadata. The two diverge after hires or upscale — an upscaled image was
+  showing its source size (e.g. 1536² for a 6144² file).
+
 ## [0.1.0] - 2026-07-08
 
 Initial release: a working txt2img app driving the `image-forge serve` engine —

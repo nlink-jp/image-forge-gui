@@ -111,4 +111,9 @@ struct GeneratedImage: Identifiable, Equatable {
     let prompt: String
     let seed: Int64?
     let params: GenerationRequest
+    /// Actual on-disk pixel dimensions (PNG IHDR). Preferred over the request's
+    /// width/height for display, which is the *requested* size and diverges after
+    /// hires or upscale. nil until read from the file.
+    var pixelWidth: Int? = nil
+    var pixelHeight: Int? = nil
 }

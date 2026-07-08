@@ -43,6 +43,32 @@ struct PngMetadata: Equatable {
         return read(data)
     }
 
+    // MARK: - Actual pixel dimensions
+
+    /// The true on-disk pixel dimensions from the PNG's `IHDR` chunk. These differ
+    /// from the width/height carried in the text metadata after hires or upscale,
+    /// which record the *requested* size — so the gallery uses these for the size
+    /// it shows. Returns nil if the bytes don't start with a PNG signature + IHDR.
+    static func pixelSize(_ data: Data) -> (width: Int, height: Int)? {
+        // signature(8) + length(4) + "IHDR"(4) + width(4 BE) + height(4 BE) = 24.
+        let b = [UInt8](data.prefix(24))
+        guard b.count >= 24, Array(b[0..<8]) == signature,
+              b[12] == 0x49, b[13] == 0x48, b[14] == 0x44, b[15] == 0x52 else { return nil }
+        let w = Int(b[16]) << 24 | Int(b[17]) << 16 | Int(b[18]) << 8 | Int(b[19])
+        let h = Int(b[20]) << 24 | Int(b[21]) << 16 | Int(b[22]) << 8 | Int(b[23])
+        guard w > 0, h > 0 else { return nil }
+        return (w, h)
+    }
+
+    /// `pixelSize` for a PNG on disk, reading only the 24-byte header (no full
+    /// decode), so it's cheap enough to call on the main thread per finished image.
+    static func pixelSize(contentsOf url: URL) -> (width: Int, height: Int)? {
+        guard let fh = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? fh.close() }
+        guard let head = try? fh.read(upToCount: 24), head.count >= 24 else { return nil }
+        return pixelSize(head)
+    }
+
     // MARK: - Chunk walking
 
     private static let signature: [UInt8] = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]

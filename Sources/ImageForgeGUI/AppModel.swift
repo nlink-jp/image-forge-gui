@@ -288,9 +288,11 @@ final class AppModel: ObservableObject {
                 try await client.upscale(input: image.url, output: out, model: model)
                 var params = image.params
                 params.output = out.path
+                let size = PngMetadata.pixelSize(contentsOf: out)
                 let up = GeneratedImage(
                     id: UUID(), url: out,
-                    prompt: image.prompt, seed: image.seed, params: params)
+                    prompt: image.prompt, seed: image.seed, params: params,
+                    pixelWidth: size?.width, pixelHeight: size?.height)
                 self.results.insert(up, at: 0)
                 self.selectedID = up.id
                 self.statusMessage = "Upscaled (\(model)) — " + self.libraryStatus(count: self.results.count)
@@ -353,20 +355,32 @@ final class AppModel: ObservableObject {
 
         Task.detached(priority: .utility) { [weak self] in
             var meta: [String: PngMetadata] = [:]
+            var sizes: [String: (Int, Int)] = [:]
             for url in urls {
                 if let m = PngMetadata.read(contentsOf: url) { meta[url.path] = m }
+                if let s = PngMetadata.pixelSize(contentsOf: url) { sizes[url.path] = s }
             }
-            await self?.applyLibraryMetadata(meta, token: token)
+            await self?.applyLibraryMetadata(meta, sizes: sizes, token: token)
         }
     }
 
     /// Merge parsed metadata into the current results, matched by file path. Guarded
     /// by `token` so a stale load (after a switch) is discarded, and applied by
     /// mapping (not reassigning) so images generated during the load survive.
-    private func applyLibraryMetadata(_ meta: [String: PngMetadata], token: Int) {
+    private func applyLibraryMetadata(
+        _ meta: [String: PngMetadata], sizes: [String: (Int, Int)], token: Int
+    ) {
         guard token == loadGeneration else { return }
         results = results.map { img in
-            guard let m = meta[img.url.path] else { return img }
+            let size = sizes[img.url.path]
+            guard let m = meta[img.url.path] else {
+                // No text metadata, but still record the real pixel size so the
+                // inspector shows the file's actual dimensions.
+                var updated = img
+                updated.pixelWidth = size?.0
+                updated.pixelHeight = size?.1
+                return updated
+            }
             var params = img.params
             params.prompt = m.prompt ?? params.prompt
             params.negative = m.negative
@@ -381,7 +395,8 @@ final class AppModel: ObservableObject {
                 id: img.id, url: img.url,
                 prompt: m.prompt ?? img.prompt,
                 seed: m.seed ?? img.seed,
-                params: params)
+                params: params,
+                pixelWidth: size?.0, pixelHeight: size?.1)
         }
     }
 
@@ -434,12 +449,16 @@ final class AppModel: ObservableObject {
 
     private func finishOne(outputPath: String, seed: Int64?) {
         let req = inFlight.removeValue(forKey: outputPath)
+        let url = URL(fileURLWithPath: outputPath)
+        let size = PngMetadata.pixelSize(contentsOf: url)
         let image = GeneratedImage(
             id: UUID(),
-            url: URL(fileURLWithPath: outputPath),
+            url: url,
             prompt: req?.prompt ?? "",
             seed: seed ?? req?.seed,
-            params: req ?? GenerationRequest(prompt: "", output: outputPath)
+            params: req ?? GenerationRequest(prompt: "", output: outputPath),
+            pixelWidth: size?.width,
+            pixelHeight: size?.height
         )
         results.insert(image, at: 0)
         if selectedID == nil { selectedID = image.id }
