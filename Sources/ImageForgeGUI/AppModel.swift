@@ -19,6 +19,9 @@ final class AppModel: ObservableObject {
     @Published var selection: Set<GeneratedImage.ID> = []
     // Anchor for ⇧-click range selection (the last plainly-clicked/toggled id).
     private var selectionAnchor: GeneratedImage.ID?
+    // Images awaiting a delete confirmation (nil = no dialog). The gallery binds a
+    // confirmation dialog to this; on confirm it calls `delete(_:)`.
+    @Published var pendingDeletion: Set<GeneratedImage.ID>?
 
     // Live status.
     @Published var isGenerating = false
@@ -564,7 +567,16 @@ final class AppModel: ObservableObject {
         }
     }
 
-    func deleteSelected() { delete(selection) }
+    /// Ask to delete these images — shows the confirmation dialog (delete is
+    /// irreversible-feeling even though it goes to the Trash). No-op for an empty
+    /// set or ids no longer in the gallery.
+    func requestDelete(_ ids: Set<GeneratedImage.ID>) {
+        let present = ids.intersection(Set(results.map(\.id)))
+        guard !present.isEmpty else { return }
+        pendingDeletion = present
+    }
+
+    func requestDeleteSelected() { requestDelete(selection) }
 
     /// Move images (by id) into another library's folder on disk and drop them
     /// from the current gallery.

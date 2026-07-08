@@ -66,6 +66,22 @@ struct GalleryView: View {
                 model.upscale(img, model: chosen)
             }
         }
+        .confirmationDialog(
+            "Move to Trash?",
+            isPresented: Binding(
+                get: { model.pendingDeletion != nil },
+                set: { if !$0 { model.pendingDeletion = nil } }),
+            presenting: model.pendingDeletion
+        ) { ids in
+            Button(ids.count == 1 ? "Move to Trash" : "Move \(ids.count) to Trash",
+                   role: .destructive) {
+                model.delete(ids)
+                model.pendingDeletion = nil
+            }
+            Button("Cancel", role: .cancel) { model.pendingDeletion = nil }
+        } message: { ids in
+            Text("\(ids.count) image\(ids.count == 1 ? "" : "s") will be moved to the Trash — you can restore \(ids.count == 1 ? "it" : "them") from there.")
+        }
     }
 
     /// A slim header above the grid: a library switcher (folder menu) on the left
@@ -182,7 +198,7 @@ struct GalleryView: View {
             NSWorkspace.shared.activateFileViewerSelecting([img.url])
         }
         Divider()
-        Button(n > 1 ? "Delete \(n) Images" : "Delete", role: .destructive) { model.delete(sel) }
+        Button(n > 1 ? "Delete \(n) Images" : "Delete", role: .destructive) { model.requestDelete(sel) }
     }
 }
 
@@ -248,7 +264,7 @@ struct SelectionBar: View {
                 Button { model.exportSelected() } label: {
                     Label("Export", systemImage: "square.and.arrow.up")
                 }
-                Button(role: .destructive) { model.deleteSelected() } label: {
+                Button(role: .destructive) { model.requestDeleteSelected() } label: {
                     Label("Delete", systemImage: "trash")
                 }
             }

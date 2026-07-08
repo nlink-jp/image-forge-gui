@@ -39,7 +39,7 @@ struct AppCommands: Commands {
             Button("Export Selected…") { model.exportSelected() }
                 .keyboardShortcut("e", modifiers: .command)
                 .disabled(model.selection.isEmpty)
-            Button("Delete Selected") { model.deleteSelected() }
+            Button("Delete Selected") { model.requestDeleteSelected() }
                 .keyboardShortcut(.delete, modifiers: .command)
                 .disabled(model.selection.isEmpty)
         }
