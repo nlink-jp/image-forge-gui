@@ -5,16 +5,22 @@
 （`serve`）を駆動する薄い SwiftUI フロントエンドです。モデルを選び、プロンプトを
 書き、単発／バッチで生成し、結果をライブ進捗つきのギャラリーで見比べます。
 
-macOS 14+（Apple silicon）。**初期 scaffold**（Phase 1 Core）— 状況は末尾参照。
+macOS 14+（Apple silicon）。
 
 ## できること
 
-- **Composer**（左）: プロンプト／ネガティブ、モデル選択（`models list --json`、
-  拡散モデルのみ）、基本パラメータ（seed とランダムトグル、steps、CFG、幅／高さ、
-  hires auto/on/off）、バッチ**枚数**。「Generate」で生成。
-- **Gallery**（メイン）: アクティブなライブラリの PNG のグリッド。クリックで選択、
-  簡易インスペクタにプロンプトと seed を表示（プロンプトコピー可）。右クリックで
-  **Reveal in Finder**（Phase 2 スタブ: パラメータ再利用・アップスケール）。ヘッダー
+- **Composer**（左）: プロンプト／ネガティブ（サイズ変更可能なエディタ）、モデル選択
+  （各モデルのアーキテクチャとカタログ上のコンテンツ評価を表示、**Safe only** トグルで
+  questionable／explicit を隠す）、基本パラメータ（seed とランダムトグル、steps、CFG、
+  幅／高さ、hires）、**Advanced** セクション（sampler／scheduler／clip-skip の上書き）、
+  バッチ**枚数**。「Generate」で生成 — 生成中は **Cancel**（⌘.）に変わり、バッチを
+  即座に中止できます。
+- **Gallery**（メイン）: アクティブなライブラリの PNG のグリッド。クリックで選択
+  （下部インスペクタにプロンプト・seed・サイズを表示）、ダブルクリック（または
+  **View**）で **ライトボックス**（←/→ で前後移動、Finder 表示）。コンテキストメニュー・
+  インスペクタ・ライトボックスから **Reuse Prompt**、**Reuse All Parameters**
+  （"make similar"＝全設定をコピーするので、新しい seed でバリエーションになる）、
+  **Copy Prompt** ／ **Copy Negative Prompt**、**Reveal in Finder** が使えます。ヘッダー
   行の**ライブラリ切替**（フォルダメニュー）で名前付きライブラリを切り替え、新規追加
   （任意のフォルダ）、Finder 表示、一覧からの削除ができます。
 - **ステータスバー**: エンジンの `ready` / `load` / `progress` / `done` / `error`
@@ -66,10 +72,13 @@ make test
 
 ## 状況
 
-Phase 1 Core scaffold: 動作する txt2img アプリ（単発＋バッチ）→ ライブ進捗つき
-ギャラリー。**後続フェーズのスタブ:** SwiftData 履歴＋プロンプト再利用、
-お気に入り／エクスポート磨き込み、img2img（画像ドロップ＋strength）、ギャラリーの
-アップスケール（`image-forge upscale`）。inpaint / ControlNet とモデル管理は CLI 側。
+v0.1.0 — 動作する txt2img アプリ。Composer（単発＋バッチ、中止、Advanced 上書き）→
+Gallery（ライトボックス、プロンプト／全パラメータ再利用、切替可能なライブラリ）を
+ライブ進捗つきで提供。再利用は現在のセッションでも、ライブラリフォルダから読み込んだ
+画像（埋め込みメタデータから復元）でも動作します。
+
+**未実装:** img2img（画像ドロップ＋strength）とギャラリーのアップスケール
+（`image-forge upscale`）は UI 上スタブです。inpaint / ControlNet とモデル管理は CLI 側。
 
 ## なぜ Swift（ネイティブ macOS）
 

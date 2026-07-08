@@ -91,11 +91,13 @@ assets/                AppIcon-1024.png (→ AppIcon.icns at build)
 
 ## Status
 
-Phase 1 Core scaffold (txt2img single/batch → gallery + progress) plus
-**switchable named libraries** (persisted; existing PNGs reloaded via embedded
-metadata). Stubbed for later phases (marked TODO in code): SwiftData history +
-prompt reuse, favorites / export polish, img2img (drop + strength), gallery
-upscale (`image-forge upscale`).
+v0.1.0 — working txt2img app: Composer (single/batch, **cancel** via
+terminate+relaunch serve, **Advanced** sampler/scheduler/clip-skip overrides,
+model arch + rating with **Safe only**) → Gallery (**lightbox**, **switchable
+named libraries** persisted + reloaded via embedded metadata, **Reuse Prompt /
+Reuse All Parameters** + Copy Prompt/Negative from context menu, inspector, and
+lightbox) with live progress. Stubbed in the UI (marked TODO in code): img2img
+(drop + strength) and gallery upscale (`image-forge upscale`).
 
 ## Design reference
 

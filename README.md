@@ -5,19 +5,25 @@ front-end that drives the [`image-forge`](https://github.com/nlink-jp/image-forg
 CLI's resident `serve` engine. Pick a model, write a prompt, generate single
 images or batches, and browse the results in a gallery with live progress.
 
-macOS 14+ (Apple silicon). **Early scaffold** (Phase 1 Core) — see status below.
+macOS 14+ (Apple silicon).
 
 ## What it does
 
-- **Composer** (left): prompt / negative, model picker (`models list --json`,
-  diffusion models only), core parameters (seed with a random toggle, steps, CFG,
-  width/height, hires auto/on/off), and a batch **count**. Press **Generate**.
-- **Gallery** (main): a grid of the active library's PNGs. Click to select;
-  a small inspector shows the prompt and seed, with a prompt-copy button.
-  Right-click for **Reveal in Finder** (and Phase 2 stubs: Reuse Parameters,
-  Upscale). A **library switcher** (folder menu) in the header row switches
-  between named libraries, adds a new one (any folder), reveals it, or removes it
-  from the list.
+- **Composer** (left): prompt / negative (resizable editors), a model picker
+  showing each model's architecture and catalog content rating with a **Safe
+  only** toggle (hide questionable / explicit), core parameters (seed with a
+  random toggle, steps, CFG, width/height, hires), an **Advanced** section
+  (sampler / scheduler / clip-skip overrides), and a batch **count**. Press
+  **Generate** — it turns into **Cancel** (⌘.) while running, which stops the
+  batch immediately.
+- **Gallery** (main): a grid of the active library's PNGs. Click to select (a
+  bottom inspector shows the prompt, seed, and size); double-click (or **View**)
+  opens a **lightbox** with prev/next (←/→) and reveal. From the context menu,
+  inspector, or lightbox you can **Reuse Prompt**, **Reuse All Parameters**
+  ("make similar" — copies every setting, so a new seed yields a variation),
+  **Copy Prompt** / **Copy Negative Prompt**, and **Reveal in Finder**. A
+  **library switcher** (folder menu) in the header row switches between named
+  libraries, adds a new one (any folder), reveals it, or removes it from the list.
 - **Status bar**: a live progress bar and status message driven by the engine's
   `ready` / `load` / `progress` / `done` / `error` events; errors surface inline.
 
@@ -69,10 +75,14 @@ make test
 
 ## Status
 
-Phase 1 Core scaffold: a runnable txt2img app (single + batch) → gallery with live
-progress. **Stubbed for later phases:** SwiftData history + prompt reuse,
-favorites / export polish, img2img (image drop + strength), and gallery upscale
-(`image-forge upscale`). inpaint / ControlNet and model management stay in the CLI.
+v0.1.0 — a working txt2img app: Composer (single + batch, cancel, advanced
+overrides) → Gallery (lightbox, prompt / full-parameter reuse, switchable
+libraries) with live progress. Reuse works both for the current session and for
+images reloaded from a library folder (reconstructed from embedded metadata).
+
+**Not yet implemented:** img2img (image drop + strength) and gallery upscale
+(`image-forge upscale`) are stubbed in the UI. inpaint / ControlNet and model
+management stay in the CLI.
 
 ## Why Swift (native macOS)
 

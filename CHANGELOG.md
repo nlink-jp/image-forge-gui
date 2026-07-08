@@ -3,9 +3,11 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [0.1.0] - unreleased
+## [0.1.0] - 2026-07-08
 
-Initial project scaffold (Phase 1 Core).
+Initial release: a working txt2img app driving the `image-forge serve` engine —
+Composer (single + batch) → Gallery with live progress, prompt / full-parameter
+reuse, and switchable libraries.
 
 ### Added
 - SwiftPM app (macOS 14+, normal windowed app — Dock icon + standard menu bar),
@@ -20,13 +22,24 @@ Initial project scaffold (Phase 1 Core).
   `image-forge models list --json`.
 - **Binary resolution** (`BinaryResolver`, pure + tested): bundled Resources →
   `$IMAGE_FORGE_BIN` → `~/bin/image-forge` → `PATH`.
-- **Composer → Generate → Gallery** flow: model picker (diffusion only), prompt /
-  negative, seed (fixed+increment or random `-1` per image), steps, CFG,
-  width/height, hires (auto/on/off), batch count. `AppModel` submits N requests
-  with unique output paths under the app library dir, consumes events, and appends
+- **Composer → Generate → Gallery** flow: model picker showing each model's
+  architecture + catalog content rating with a **Safe only** toggle (hide
+  questionable / explicit; diffusion models only), resizable prompt / negative
+  editors, seed (fixed+increment or random `-1` per image), steps, CFG,
+  width/height, hires (auto/on/off), batch count, and an **Advanced** section
+  (sampler / scheduler / clip-skip overrides). `AppModel` submits N requests with
+  unique output paths under the app library dir, consumes events, and appends
   finished PNGs to the session gallery with live progress.
-- **Gallery**: `LazyVGrid` thumbnails, selection inspector (prompt + seed + copy),
-  context menu with a functional **Reveal in Finder**.
+- **Cancel generation**: while a batch runs, Generate becomes **Cancel** (⌘.). It
+  terminates and relaunches the serve process (sd.cpp renders are blocking and
+  can't be interrupted in place) — killing the current render and discarding queued
+  items; an epoch guard keeps the old event stream from clobbering state.
+- **Gallery**: `LazyVGrid` thumbnails; a selection inspector (prompt / seed / size);
+  a full-size **lightbox** (double-click or View, prev/next via ←/→, reveal, Esc to
+  close). **Reuse Prompt** / **Reuse All Parameters** ("make similar") and **Copy
+  Prompt** / **Copy Negative Prompt** / **Reveal in Finder** from the context menu,
+  inspector, and lightbox — reuse loads a gallery image's parameters back into the
+  Composer (session images and library-reloaded images alike).
 - **Switchable libraries**: several named library folders the user switches between
   (`LibraryStore` — ordered list + active id persisted to `libraries.json`; seeds a
   **Default** pointing at the original fixed library dir for migration). Switching
@@ -47,8 +60,9 @@ Initial project scaffold (Phase 1 Core).
   `LibraryStore` (seed/migration, add/switch/remove round-trip, Default/last
   protection).
 
-### Stubbed (later phases)
-- SwiftData history + prompt reuse, favorites / export polish, img2img (image drop
-  + strength), gallery upscale (`image-forge upscale`) — marked TODO in the code.
+### Not yet implemented
+- img2img (image drop + strength) and gallery **Upscale…** (`image-forge upscale`)
+  are stubbed in the UI (marked TODO in the code). inpaint / ControlNet and model
+  management stay in the CLI.
 
 [0.1.0]: https://github.com/nlink-jp/image-forge-gui/releases/tag/v0.1.0
