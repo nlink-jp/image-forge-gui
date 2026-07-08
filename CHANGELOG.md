@@ -29,6 +29,11 @@ Completes the two features left stubbed in v0.1.0: img2img and gallery upscale.
   PNG `IHDR` chunk) instead of the *requested* width/height from the embedded
   text metadata. The two diverge after hires or upscale — an upscaled image was
   showing its source size (e.g. 1536² for a 6144² file).
+- **Upscaled images keep their prompt** on library reload: the bundled CLI is now
+  **image-forge v0.12.1**, whose `upscale` carries the source's generation
+  metadata (prompt / seed / params) into the output PNG. (Images upscaled before
+  this — with an older CLI — have no embedded prompt and won't gain one
+  retroactively; re-upscale to embed it.)
 
 ## [0.1.0] - 2026-07-08
 
