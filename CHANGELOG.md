@@ -23,7 +23,8 @@ Completes the two features left stubbed in v0.1.0: img2img and gallery upscale.
   mutually exclusive with generation (blocked while either runs) to avoid two
   concurrent Metal loads on the 16 GB baseline; the status bar shows a spinner.
 - **Multi-select gallery + batch actions**: click selects, **⌘-click** toggles,
-  **⇧-click** extends a range. With a selection you can **Delete** (to the Trash,
+  **⇧-click** extends a range, and a click on the empty area **deselects**. With a
+  selection you can **Delete** (to the Trash,
   after a confirmation dialog), **Export** (a save panel for one, a folder picker
   for several), and **Move to Library** (relocate the files into another library's
   folder) — from a selection bar at the bottom, the right-click menu, and the File

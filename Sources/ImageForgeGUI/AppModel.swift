@@ -109,6 +109,12 @@ final class AppModel: ObservableObject {
     /// Select every image in the gallery.
     func selectAll() { selection = Set(results.map(\.id)) }
 
+    /// Clear the selection (e.g. a click on the gallery's empty area).
+    func clearSelection() {
+        selection = []
+        selectionAnchor = nil
+    }
+
     /// The contiguous slice of `ids` between `anchor` and `target` (inclusive),
     /// or nil if either is absent. Pure, so range selection is unit-testable.
     nonisolated static func rangeIDs(

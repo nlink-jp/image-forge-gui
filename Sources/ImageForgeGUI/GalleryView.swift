@@ -44,6 +44,12 @@ struct GalleryView: View {
                     }
                     .padding(12)
                 }
+                // A click on the empty area around/below the thumbnails clears the
+                // selection (thumbnail taps are consumed by their own gesture, so
+                // they don't reach this). contentShape makes the transparent
+                // viewport hit-testable.
+                .contentShape(Rectangle())
+                .onTapGesture { model.clearSelection() }
             }
 
             if model.selection.count > 1 {
