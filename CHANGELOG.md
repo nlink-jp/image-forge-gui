@@ -3,6 +3,27 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.0] - unreleased
+
+Completes the two features left stubbed in v0.1.0: img2img and gallery upscale.
+
+### Added
+- **img2img**: an **Init image** section in the Composer — drop an image (from
+  Finder or the gallery) or pick one, with a **strength** slider (engine default
+  0.6); a set init image makes the next generation img2img (`init` + `strength`
+  on the serve request; strength is only sent alongside an init image). A gallery
+  **Use as Init Image (img2img)** action (context menu / inspector / lightbox)
+  sends a picked image straight to the Composer as the init image. Reuse-all and
+  New Generation clear / restore it (restored only if the file still exists).
+- **Upscale**: the gallery **Upscale…** action (context menu / inspector /
+  lightbox) opens a sheet to pick an installed ESRGAN model; it runs a one-shot
+  `image-forge upscale` (separate from the resident engine), writes the result
+  into the active library, and prepends it to the gallery. Real-ESRGAN upscales
+  by its native factor (×4), so there's no scale control. A one-shot upscale is
+  mutually exclusive with generation (blocked while either runs) to avoid two
+  concurrent Metal loads on the 16 GB baseline; the status bar shows a spinner.
+- Tests: `ServeClient.upscaleArgs` argument building.
+
 ## [0.1.0] - 2026-07-08
 
 Initial release: a working txt2img app driving the `image-forge serve` engine —

@@ -19,6 +19,7 @@ final class AppModel: ObservableObject {
 
     // Live status.
     @Published var isGenerating = false
+    @Published var isUpscaling = false          // a one-shot `image-forge upscale` is running
     @Published var progress: Double = 0        // 0…1 for the current image
     @Published var statusMessage: String = "Starting engine…"
     @Published var errorMessage: String?
@@ -40,6 +41,24 @@ final class AppModel: ObservableObject {
         pendingReuse = (params, promptOnly)
         reuseTick += 1
     }
+
+    // Bumped to ask the Composer to adopt a gallery image as the img2img init
+    // image. `pendingInitURL` carries the file.
+    @Published var setInitTick = 0
+    private(set) var pendingInitURL: URL?
+
+    /// Send a gallery image to the Composer as its img2img init image.
+    func useAsInit(_ url: URL) {
+        pendingInitURL = url
+        setInitTick += 1
+    }
+
+    // The gallery image awaiting the Upscale sheet (nil = no sheet). Any view can
+    // set this to present it; GalleryView owns the `.sheet`.
+    @Published var upscaleRequest: GeneratedImage?
+
+    /// Installed ESRGAN upscaler models (`kind == "upscaler"`), for the Upscale sheet.
+    var upscalerModels: [ModelInfo] { models.filter { ($0.kind ?? "") == "upscaler" } }
 
     // Switchable libraries: the list + which one is active, mirrored from the
     // store so the Gallery's switcher can observe them. `activeLibraryURL` is
@@ -185,15 +204,19 @@ final class AppModel: ObservableObject {
         hires: String?,
         sampler: String? = nil,
         scheduler: String? = nil,
-        clipSkip: Int? = nil
+        clipSkip: Int? = nil,
+        initPath: String? = nil,
+        strength: Double? = nil
     ) {
         let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        guard !isGenerating else { return }
+        guard !isGenerating, !isUpscaling else { return }
         guard let client else {
             errorMessage = "The image-forge engine isn't running."
             return
         }
+        // Strength only means anything alongside an init image (img2img).
+        let effStrength = (initPath?.isEmpty ?? true) ? nil : strength
 
         let n = max(1, count)
         isGenerating = true
@@ -226,6 +249,8 @@ final class AppModel: ObservableObject {
                 scheduler: scheduler,
                 clipSkip: clipSkip,
                 hires: hires,
+                initPath: (initPath?.isEmpty ?? true) ? nil : initPath,
+                strength: effStrength,
                 output: outURL.path
             )
             inFlight[outURL.path] = req
@@ -239,6 +264,42 @@ final class AppModel: ObservableObject {
             }
         }
         if pending == 0 { isGenerating = false }
+    }
+
+    /// Upscale a gallery image with an installed ESRGAN model via a one-shot
+    /// `image-forge upscale` (separate from the resident engine). The result is
+    /// written into the active library and prepended to the gallery. The factor
+    /// is the model's native one (typically ×4). Runs off the generation path, so
+    /// it's blocked while a generation is in flight (and vice versa) to avoid two
+    /// concurrent Metal loads on the memory-tight baseline.
+    func upscale(_ image: GeneratedImage, model: String) {
+        guard !isGenerating, !isUpscaling else { return }
+        guard let client else {
+            errorMessage = "The image-forge engine isn't running."
+            return
+        }
+        let out = activeLibraryURL.appendingPathComponent(UUID().uuidString + ".png")
+        isUpscaling = true
+        errorMessage = nil
+        statusMessage = "Upscaling with \(model)…"
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                try await client.upscale(input: image.url, output: out, model: model)
+                var params = image.params
+                params.output = out.path
+                let up = GeneratedImage(
+                    id: UUID(), url: out,
+                    prompt: image.prompt, seed: image.seed, params: params)
+                self.results.insert(up, at: 0)
+                self.selectedID = up.id
+                self.statusMessage = "Upscaled (\(model)) — " + self.libraryStatus(count: self.results.count)
+            } catch {
+                self.errorMessage = "Upscale failed: \(error.localizedDescription)"
+                self.statusMessage = "Upscale failed"
+            }
+            self.isUpscaling = false
+        }
     }
 
     // MARK: - Libraries

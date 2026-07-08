@@ -55,6 +55,11 @@ struct GalleryView: View {
                     .transition(.opacity)
             }
         }
+        .sheet(item: $model.upscaleRequest) { img in
+            UpscaleSheet(image: img, upscalers: model.upscalerModels) { chosen in
+                model.upscale(img, model: chosen)
+            }
+        }
     }
 
     /// A slim header above the grid: a library switcher (folder menu) on the left
@@ -128,16 +133,17 @@ struct GalleryView: View {
     private func contextMenu(for img: GeneratedImage) -> some View {
         Button("Reuse Prompt") { model.reuse(img.params, promptOnly: true) }
         Button("Reuse All Parameters") { model.reuse(img.params, promptOnly: false) }
+        Button("Use as Init Image (img2img)") { model.useAsInit(img.url) }
         Divider()
         Button("Copy Prompt") { setClipboard(img.prompt) }
         Button("Copy Negative Prompt") { setClipboard(img.params.negative ?? "") }
             .disabled((img.params.negative ?? "").isEmpty)
         Divider()
+        Button("Upscale…") { model.upscaleRequest = img }
+            .disabled(model.upscalerModels.isEmpty)
         Button("Reveal in Finder") {
             NSWorkspace.shared.activateFileViewerSelecting([img.url])
         }
-        // TODO (Phase 2): run `image-forge upscale` on this image.
-        Button("Upscale…") {}.disabled(true)
     }
 }
 
@@ -210,6 +216,10 @@ struct InspectorBar: View {
                 Menu {
                     Button("Reuse Prompt") { model.reuse(image.params, promptOnly: true) }
                     Button("Reuse All Parameters (make similar)") { model.reuse(image.params, promptOnly: false) }
+                    Button("Use as Init Image (img2img)") { model.useAsInit(image.url) }
+                    Divider()
+                    Button("Upscale…") { model.upscaleRequest = image }
+                        .disabled(model.upscalerModels.isEmpty)
                 } label: {
                     Label("Reuse", systemImage: "arrow.uturn.backward")
                 }
@@ -278,10 +288,14 @@ struct LightboxView: View {
                         Menu {
                             Button("Reuse Prompt") { model.reuse(img.params, promptOnly: true); currentID = nil }
                             Button("Reuse All Parameters (make similar)") { model.reuse(img.params, promptOnly: false); currentID = nil }
+                            Button("Use as Init Image (img2img)") { model.useAsInit(img.url); currentID = nil }
                             Divider()
                             Button("Copy Prompt") { setClipboard(img.prompt) }
                             Button("Copy Negative") { setClipboard(img.params.negative ?? "") }
                                 .disabled((img.params.negative ?? "").isEmpty)
+                            Divider()
+                            Button("Upscale…") { model.upscaleRequest = img; currentID = nil }
+                                .disabled(model.upscalerModels.isEmpty)
                         } label: {
                             Image(systemName: "ellipsis.circle").font(.system(size: 22))
                         }

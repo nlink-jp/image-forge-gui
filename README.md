@@ -11,17 +11,20 @@ macOS 14+ (Apple silicon).
 
 - **Composer** (left): prompt / negative (resizable editors), a model picker
   showing each model's architecture and catalog content rating with a **Safe
-  only** toggle (hide questionable / explicit), core parameters (seed with a
-  random toggle, steps, CFG, width/height, hires), an **Advanced** section
-  (sampler / scheduler / clip-skip overrides), and a batch **count**. Press
-  **Generate** — it turns into **Cancel** (⌘.) while running, which stops the
-  batch immediately.
+  only** toggle (hide questionable / explicit), an **Init image** section for
+  **img2img** (drop or choose an image + a **strength** slider), core parameters
+  (seed with a random toggle, steps, CFG, width/height, hires), an **Advanced**
+  section (sampler / scheduler / clip-skip overrides), and a batch **count**.
+  Press **Generate** — it turns into **Cancel** (⌘.) while running, which stops
+  the batch immediately.
 - **Gallery** (main): a grid of the active library's PNGs. Click to select (a
   bottom inspector shows the prompt, seed, and size); double-click (or **View**)
   opens a **lightbox** with prev/next (←/→) and reveal. From the context menu,
   inspector, or lightbox you can **Reuse Prompt**, **Reuse All Parameters**
   ("make similar" — copies every setting, so a new seed yields a variation),
-  **Copy Prompt** / **Copy Negative Prompt**, and **Reveal in Finder**. A
+  **Use as Init Image** (send it to the Composer for img2img), **Upscale…**
+  (ESRGAN ×4 into the current library), **Copy Prompt** / **Copy Negative
+  Prompt**, and **Reveal in Finder**. A
   **library switcher** (folder menu) in the header row switches between named
   libraries, adds a new one (any folder), reveals it, or removes it from the list.
 - **Status bar**: a live progress bar and status message driven by the engine's
@@ -75,14 +78,14 @@ make test
 
 ## Status
 
-v0.1.0 — a working txt2img app: Composer (single + batch, cancel, advanced
-overrides) → Gallery (lightbox, prompt / full-parameter reuse, switchable
-libraries) with live progress. Reuse works both for the current session and for
-images reloaded from a library folder (reconstructed from embedded metadata).
+A working txt2img **and img2img** app: Composer (single + batch, cancel, advanced
+overrides, init image) → Gallery (lightbox, prompt / full-parameter reuse,
+use-as-init, ESRGAN upscale, switchable libraries) with live progress. Reuse
+works both for the current session and for images reloaded from a library folder
+(reconstructed from embedded metadata).
 
-**Not yet implemented:** img2img (image drop + strength) and gallery upscale
-(`image-forge upscale`) are stubbed in the UI. inpaint / ControlNet and model
-management stay in the CLI.
+**Stays in the CLI:** inpaint / ControlNet / LoRA and model management (this app
+drives the `serve` engine for txt2img / img2img plus one-shot `upscale`).
 
 ## Why Swift (native macOS)
 

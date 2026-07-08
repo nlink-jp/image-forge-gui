@@ -151,6 +151,26 @@ final class ServeClient: @unchecked Sendable {
         return try ModelInfo.decodeInstalled(from: data)
     }
 
+    /// One-shot: `image-forge upscale <input> -o <output> [--model <name>]`, run
+    /// as a separate short-lived process (not the resident engine). The output
+    /// factor is the ESRGAN model's native one (typically ×4) — image-forge
+    /// ignores a requested `--scale` for Real-ESRGAN, so we don't pass it. On
+    /// success the CLI prints the output path to stdout; progress goes to the
+    /// child's stderr (drained). Throws `.runFailed` on a nonzero exit.
+    func upscale(input: URL, output: URL, model: String) async throws {
+        _ = try await Self.runOneShot(
+            binary: binary,
+            args: Self.upscaleArgs(input: input.path, output: output.path, model: model))
+    }
+
+    /// Pure arg builder for `image-forge upscale` (injectable for tests). An empty
+    /// `model` omits `--model`, letting the CLI use its configured default.
+    static func upscaleArgs(input: String, output: String, model: String) -> [String] {
+        var args = ["upscale", input, "-o", output]
+        if !model.isEmpty { args += ["--model", model] }
+        return args
+    }
+
     /// Run a short-lived `image-forge` subcommand to completion and return its
     /// stdout, throwing `.runFailed` on a nonzero exit.
     static func runOneShot(binary: URL, args: [String]) async throws -> Data {

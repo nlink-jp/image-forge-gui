@@ -30,6 +30,10 @@ struct StatusBar: View {
                 ProgressView(value: model.progress)
                     .progressViewStyle(.linear)
                     .frame(width: 160)
+            } else if model.isUpscaling {
+                ProgressView()
+                    .progressViewStyle(.circular)
+                    .controlSize(.small)
             }
             Text(model.statusMessage)
                 .font(.callout)

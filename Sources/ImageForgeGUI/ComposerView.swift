@@ -1,4 +1,6 @@
+import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// hires override presented in the Composer. `Default` sends no `hires` field so
 /// the engine uses the model profile's default.
@@ -50,6 +52,8 @@ struct ComposerView: View {
     @State private var samplerOverride = ""   // "" = model profile default
     @State private var schedulerOverride = "" // "" = engine/profile default
     @State private var clipSkipOverride = 0    // 0 = model profile default
+    @State private var initImageURL: URL?      // set => img2img
+    @State private var strength: Double = 0.6  // img2img denoise strength
     /// Hide questionable/explicit models from the picker when on.
     @AppStorage("safeOnly") private var safeOnly = false
 
@@ -80,6 +84,7 @@ struct ComposerView: View {
     private var canGenerate: Bool {
         !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !model.isGenerating
+            && !model.isUpscaling
             && selectedModel != nil
     }
 
@@ -112,6 +117,10 @@ struct ComposerView: View {
                 }
                 .disabled(diffusionModels.isEmpty)
                 Toggle("Safe only (hide questionable / explicit)", isOn: $safeOnly)
+            }
+
+            Section("Init image (img2img)") {
+                initImageControl
             }
 
             Section("Parameters") {
@@ -180,6 +189,54 @@ struct ComposerView: View {
         .onChange(of: safeOnly) { _, _ in syncSelectedModel() }
         .onChange(of: model.newGenerationTick) { _, _ in resetComposer() }
         .onChange(of: model.reuseTick) { _, _ in applyReuse() }
+        .onChange(of: model.setInitTick) { _, _ in
+            if let u = model.pendingInitURL { initImageURL = u }
+        }
+    }
+
+    /// The init-image control shown in the "Init image (img2img)" section: a
+    /// drop target + file picker when empty, or a thumbnail + strength slider +
+    /// Clear when set. Dropping an image file (from Finder or the gallery via
+    /// "Use as Init Image") sets it.
+    @ViewBuilder private var initImageControl: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let url = initImageURL {
+                HStack(alignment: .top, spacing: 10) {
+                    AsyncImage(url: url) { $0.resizable().aspectRatio(contentMode: .fit) }
+                        placeholder: { ProgressView() }
+                        .frame(width: 64, height: 64)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(.secondary.opacity(0.3)))
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(url.lastPathComponent)
+                            .font(.caption).lineLimit(1).truncationMode(.middle)
+                        Button("Clear") { initImageURL = nil }.controlSize(.small)
+                    }
+                    Spacer()
+                }
+                HStack(spacing: 8) {
+                    Text("Strength").font(.caption).foregroundStyle(.secondary)
+                    Slider(value: $strength, in: 0.05...1.0, step: 0.05)
+                    Text(String(format: "%.2f", strength))
+                        .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                        .frame(width: 34, alignment: .trailing)
+                }
+            } else {
+                Button { chooseInitImage() } label: {
+                    Label("Choose or drop an image…", systemImage: "photo.badge.plus")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                Text("Generate variations from an existing image. Leave empty for txt2img.")
+                    .font(.caption2).foregroundStyle(.tertiary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .dropDestination(for: URL.self) { urls, _ in
+            guard let url = urls.first(where: isImageFile) else { return false }
+            initImageURL = url
+            return true
+        }
     }
 
     /// Default the picker to the first diffusion model once the list loads.
@@ -202,6 +259,8 @@ struct ComposerView: View {
         samplerOverride = ""
         schedulerOverride = ""
         clipSkipOverride = 0
+        initImageURL = nil
+        strength = 0.6
         randomSeed = true
         promptFocused = true
     }
@@ -231,6 +290,12 @@ struct ComposerView: View {
             schedulerOverride = p.scheduler ?? ""
             clipSkipOverride = p.clipSkip ?? 0
             hires = HiresMode(value: p.hires)
+            if let ip = p.initPath, !ip.isEmpty, FileManager.default.fileExists(atPath: ip) {
+                initImageURL = URL(fileURLWithPath: ip)
+                strength = p.strength ?? 0.6
+            } else {
+                initImageURL = nil
+            }
         }
         promptFocused = true
     }
@@ -250,7 +315,27 @@ struct ComposerView: View {
             hires: hires.value,
             sampler: samplerOverride.isEmpty ? nil : samplerOverride,
             scheduler: schedulerOverride.isEmpty ? nil : schedulerOverride,
-            clipSkip: clipSkipOverride == 0 ? nil : clipSkipOverride
+            clipSkip: clipSkipOverride == 0 ? nil : clipSkipOverride,
+            initPath: initImageURL?.path,
+            strength: initImageURL == nil ? nil : strength
         )
+    }
+
+    /// Present an open panel to pick an init image for img2img.
+    private func chooseInitImage() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.png, .jpeg, .image]
+        panel.prompt = "Choose"
+        panel.message = "Choose an init image for img2img"
+        if panel.runModal() == .OK, let url = panel.url { initImageURL = url }
+    }
+
+    /// True for a file URL with a raster-image extension (drop filter).
+    private func isImageFile(_ url: URL) -> Bool {
+        ["png", "jpg", "jpeg", "webp", "heic", "bmp", "gif", "tif", "tiff"]
+            .contains(url.pathExtension.lowercased())
     }
 }

@@ -11,18 +11,20 @@ macOS 14+（Apple silicon）。
 
 - **Composer**（左）: プロンプト／ネガティブ（サイズ変更可能なエディタ）、モデル選択
   （各モデルのアーキテクチャとカタログ上のコンテンツ評価を表示、**Safe only** トグルで
-  questionable／explicit を隠す）、基本パラメータ（seed とランダムトグル、steps、CFG、
-  幅／高さ、hires）、**Advanced** セクション（sampler／scheduler／clip-skip の上書き）、
-  バッチ**枚数**。「Generate」で生成 — 生成中は **Cancel**（⌘.）に変わり、バッチを
-  即座に中止できます。
+  questionable／explicit を隠す）、**Init image** セクション＝**img2img**（画像をドロップ
+  または選択＋**strength** スライダ）、基本パラメータ（seed とランダムトグル、steps、
+  CFG、幅／高さ、hires）、**Advanced** セクション（sampler／scheduler／clip-skip の
+  上書き）、バッチ**枚数**。「Generate」で生成 — 生成中は **Cancel**（⌘.）に変わり、
+  バッチを即座に中止できます。
 - **Gallery**（メイン）: アクティブなライブラリの PNG のグリッド。クリックで選択
   （下部インスペクタにプロンプト・seed・サイズを表示）、ダブルクリック（または
   **View**）で **ライトボックス**（←/→ で前後移動、Finder 表示）。コンテキストメニュー・
   インスペクタ・ライトボックスから **Reuse Prompt**、**Reuse All Parameters**
   （"make similar"＝全設定をコピーするので、新しい seed でバリエーションになる）、
-  **Copy Prompt** ／ **Copy Negative Prompt**、**Reveal in Finder** が使えます。ヘッダー
-  行の**ライブラリ切替**（フォルダメニュー）で名前付きライブラリを切り替え、新規追加
-  （任意のフォルダ）、Finder 表示、一覧からの削除ができます。
+  **Use as Init Image**（Composer に送って img2img）、**Upscale…**（ESRGAN ×4 で現在の
+  ライブラリに出力）、**Copy Prompt** ／ **Copy Negative Prompt**、**Reveal in Finder**
+  が使えます。ヘッダー行の**ライブラリ切替**（フォルダメニュー）で名前付きライブラリを
+  切り替え、新規追加（任意のフォルダ）、Finder 表示、一覧からの削除ができます。
 - **ステータスバー**: エンジンの `ready` / `load` / `progress` / `done` / `error`
   イベントで駆動されるライブ進捗バーとメッセージ。エラーはインライン表示。
 
@@ -72,13 +74,14 @@ make test
 
 ## 状況
 
-v0.1.0 — 動作する txt2img アプリ。Composer（単発＋バッチ、中止、Advanced 上書き）→
-Gallery（ライトボックス、プロンプト／全パラメータ再利用、切替可能なライブラリ）を
-ライブ進捗つきで提供。再利用は現在のセッションでも、ライブラリフォルダから読み込んだ
-画像（埋め込みメタデータから復元）でも動作します。
+動作する txt2img **＋ img2img** アプリ。Composer（単発＋バッチ、中止、Advanced 上書き、
+初期画像）→ Gallery（ライトボックス、プロンプト／全パラメータ再利用、use-as-init、
+ESRGAN アップスケール、切替可能なライブラリ）をライブ進捗つきで提供。再利用は現在の
+セッションでも、ライブラリフォルダから読み込んだ画像（埋め込みメタデータから復元）でも
+動作します。
 
-**未実装:** img2img（画像ドロップ＋strength）とギャラリーのアップスケール
-（`image-forge upscale`）は UI 上スタブです。inpaint / ControlNet とモデル管理は CLI 側。
+**CLI 側のまま:** inpaint / ControlNet / LoRA とモデル管理（本アプリは txt2img／img2img
+用の `serve` エンジンと、単発の `upscale` を駆動します）。
 
 ## なぜ Swift（ネイティブ macOS）
 
