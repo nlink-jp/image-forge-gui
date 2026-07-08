@@ -29,9 +29,12 @@ struct GalleryView: View {
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: 12) {
                         ForEach(model.results) { img in
-                            Thumbnail(image: img, isSelected: model.selectedID == img.id)
-                                .onTapGesture(count: 2) { lightboxID = img.id }
-                                .onTapGesture { model.selectedID = img.id }
+                            Thumbnail(image: img, isSelected: model.selection.contains(img.id))
+                                // Single tap selects immediately (⌘ toggles, ⇧ extends);
+                                // a *simultaneous* double-tap opens the lightbox so the
+                                // single tap isn't delayed waiting to disambiguate.
+                                .onTapGesture { select(img) }
+                                .simultaneousGesture(TapGesture(count: 2).onEnded { lightboxID = img.id })
                                 .contextMenu {
                                     Button("View") { lightboxID = img.id }
                                     Divider()
@@ -43,7 +46,10 @@ struct GalleryView: View {
                 }
             }
 
-            if let selected = model.selectedImage {
+            if model.selection.count > 1 {
+                Divider()
+                SelectionBar()
+            } else if let selected = model.selectedImage {
                 Divider()
                 InspectorBar(image: selected)
             }
@@ -129,8 +135,30 @@ struct GalleryView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    /// Modifier-aware selection for a thumbnail click (reads the live modifier
+    /// state at click time, since SwiftUI's tap gesture doesn't carry it).
+    private func select(_ img: GeneratedImage) {
+        let mods = NSEvent.modifierFlags
+        if mods.contains(.command) {
+            model.toggleSelection(img.id)
+        } else if mods.contains(.shift) {
+            model.extendSelection(to: img.id)
+        } else {
+            model.selectOnly(img.id)
+        }
+    }
+
+    /// The ids a context-menu action targets: the whole selection when the
+    /// right-clicked image is part of it, otherwise just that image.
+    private func targets(_ img: GeneratedImage) -> Set<GeneratedImage.ID> {
+        model.selection.contains(img.id) ? model.selection : [img.id]
+    }
+
     @ViewBuilder
     private func contextMenu(for img: GeneratedImage) -> some View {
+        let sel = targets(img)
+        let n = sel.count
+        // Single-image actions act on the right-clicked image.
         Button("Reuse Prompt") { model.reuse(img.params, promptOnly: true) }
         Button("Reuse All Parameters") { model.reuse(img.params, promptOnly: false) }
         Button("Use as Init Image (img2img)") { model.useAsInit(img.url) }
@@ -138,12 +166,23 @@ struct GalleryView: View {
         Button("Copy Prompt") { setClipboard(img.prompt) }
         Button("Copy Negative Prompt") { setClipboard(img.params.negative ?? "") }
             .disabled((img.params.negative ?? "").isEmpty)
-        Divider()
         Button("Upscale…") { model.upscaleRequest = img }
             .disabled(model.upscalerModels.isEmpty)
+        Divider()
+        // Batch actions act on the selection (or just this image).
+        if !model.otherLibraries.isEmpty {
+            Menu(n > 1 ? "Move \(n) to Library" : "Move to Library") {
+                ForEach(model.otherLibraries) { lib in
+                    Button(lib.name) { model.move(sel, toLibrary: lib.id) }
+                }
+            }
+        }
+        Button(n > 1 ? "Export \(n) Images…" : "Export…") { model.export(sel) }
         Button("Reveal in Finder") {
             NSWorkspace.shared.activateFileViewerSelecting([img.url])
         }
+        Divider()
+        Button(n > 1 ? "Delete \(n) Images" : "Delete", role: .destructive) { model.delete(sel) }
     }
 }
 
@@ -181,6 +220,42 @@ struct Thumbnail: View {
             .font(.system(size: 28))
             .foregroundStyle(.tertiary)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+/// Bottom bar shown when several images are selected: a count and batch actions
+/// (move to another library, export, delete). Single-selection shows InspectorBar.
+struct SelectionBar: View {
+    @EnvironmentObject var model: AppModel
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text("\(model.selection.count) selected")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            Spacer()
+            HStack(spacing: 8) {
+                if !model.otherLibraries.isEmpty {
+                    Menu {
+                        ForEach(model.otherLibraries) { lib in
+                            Button(lib.name) { model.move(model.selection, toLibrary: lib.id) }
+                        }
+                    } label: {
+                        Label("Move to Library", systemImage: "folder")
+                    }
+                    .fixedSize()
+                }
+                Button { model.exportSelected() } label: {
+                    Label("Export", systemImage: "square.and.arrow.up")
+                }
+                Button(role: .destructive) { model.deleteSelected() } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

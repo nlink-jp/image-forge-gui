@@ -17,14 +17,16 @@ macOS 14+（Apple silicon）。
   上書き）、バッチ**枚数**。「Generate」で生成 — 生成中は **Cancel**（⌘.）に変わり、
   バッチを即座に中止できます。
 - **Gallery**（メイン）: アクティブなライブラリの PNG のグリッド。クリックで選択
-  （下部インスペクタにプロンプト・seed・サイズを表示）、ダブルクリック（または
-  **View**）で **ライトボックス**（←/→ で前後移動、Finder 表示）。コンテキストメニュー・
-  インスペクタ・ライトボックスから **Reuse Prompt**、**Reuse All Parameters**
-  （"make similar"＝全設定をコピーするので、新しい seed でバリエーションになる）、
-  **Use as Init Image**（Composer に送って img2img）、**Upscale…**（ESRGAN ×4 で現在の
-  ライブラリに出力）、**Copy Prompt** ／ **Copy Negative Prompt**、**Reveal in Finder**
-  が使えます。ヘッダー行の**ライブラリ切替**（フォルダメニュー）で名前付きライブラリを
-  切り替え、新規追加（任意のフォルダ）、Finder 表示、一覧からの削除ができます。
+  （**⌘クリック**でトグル、**⇧クリック**で範囲選択）。下部には、単一選択時はインスペクタ
+  （プロンプト・seed・サイズ）、複数選択時はバッチバー（**Delete**＝ゴミ箱／**Export**／
+  **Move to Library**）を表示。ダブルクリック（または **View**）で **ライトボックス**
+  （←/→ で前後移動、Finder 表示）。コンテキストメニュー・インスペクタ・ライトボックス
+  から **Reuse Prompt**、**Reuse All Parameters**（"make similar"＝全設定をコピーするので、
+  新しい seed でバリエーションになる）、**Use as Init Image**（Composer に送って img2img）、
+  **Upscale…**（ESRGAN ×4 で現在のライブラリに出力）、**Copy Prompt** ／
+  **Copy Negative Prompt**、**Reveal in Finder** が使えます。ヘッダー行の**ライブラリ切替**
+  （フォルダメニュー）で名前付きライブラリを切り替え、新規追加（任意のフォルダ）、
+  Finder 表示、一覧からの削除ができます。
 - **ステータスバー**: エンジンの `ready` / `load` / `progress` / `done` / `error`
   イベントで駆動されるライブ進捗バーとメッセージ。エラーはインライン表示。
 

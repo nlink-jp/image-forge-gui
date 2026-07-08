@@ -22,7 +22,13 @@ Completes the two features left stubbed in v0.1.0: img2img and gallery upscale.
   by its native factor (×4), so there's no scale control. A one-shot upscale is
   mutually exclusive with generation (blocked while either runs) to avoid two
   concurrent Metal loads on the 16 GB baseline; the status bar shows a spinner.
-- Tests: `ServeClient.upscaleArgs` argument building.
+- **Multi-select gallery + batch actions**: click selects, **⌘-click** toggles,
+  **⇧-click** extends a range. With a selection you can **Delete** (to the Trash),
+  **Export** (a save panel for one, a folder picker for several), and **Move to
+  Library** (relocate the files into another library's folder) — from a selection
+  bar at the bottom, the right-click menu, and the File menu (Export ⌘E, Delete ⌘⌫).
+- Tests: `ServeClient.upscaleArgs`, ⇧-click range selection, export/move collision
+  suffixing.
 
 ### Fixed
 - The gallery now shows each image's **actual pixel dimensions** (read from the
@@ -34,6 +40,9 @@ Completes the two features left stubbed in v0.1.0: img2img and gallery upscale.
   metadata (prompt / seed / params) into the output PNG. (Images upscaled before
   this — with an older CLI — have no embedded prompt and won't gain one
   retroactively; re-upscale to embed it.)
+- Clicking a thumbnail now highlights it **instantly**. The single-tap selection
+  was delayed while SwiftUI waited to rule out a double-tap; selection and the
+  double-tap-to-lightbox are now independent gestures.
 
 ## [0.1.0] - 2026-07-08
 

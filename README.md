@@ -17,9 +17,11 @@ macOS 14+ (Apple silicon).
   section (sampler / scheduler / clip-skip overrides), and a batch **count**.
   Press **Generate** — it turns into **Cancel** (⌘.) while running, which stops
   the batch immediately.
-- **Gallery** (main): a grid of the active library's PNGs. Click to select (a
-  bottom inspector shows the prompt, seed, and size); double-click (or **View**)
-  opens a **lightbox** with prev/next (←/→) and reveal. From the context menu,
+- **Gallery** (main): a grid of the active library's PNGs. Click to select
+  (**⌘-click** to toggle, **⇧-click** for a range); a bottom inspector shows the
+  prompt, seed, and size for a lone selection, or a batch bar (**Delete** to Trash
+  / **Export** / **Move to Library**) for several. Double-click (or **View**) opens
+  a **lightbox** with prev/next (←/→) and reveal. From the context menu,
   inspector, or lightbox you can **Reuse Prompt**, **Reuse All Parameters**
   ("make similar" — copies every setting, so a new seed yields a variation),
   **Use as Init Image** (send it to the Composer for img2img), **Upscale…**

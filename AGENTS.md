@@ -94,10 +94,13 @@ assets/                AppIcon-1024.png (→ AppIcon.icns at build)
 Working txt2img + **img2img** app: Composer (single/batch, **cancel** via
 terminate+relaunch serve, **Advanced** sampler/scheduler/clip-skip overrides,
 model arch + rating with **Safe only**, **Init image** drop/pick + strength) →
-Gallery (**lightbox**, **switchable named libraries** persisted + reloaded via
-embedded metadata, **Reuse Prompt / Reuse All Parameters / Use as Init Image /
-Upscale…** + Copy Prompt/Negative from context menu, inspector, and lightbox)
-with live progress. **img2img** = `init` + `strength` on the serve request;
+Gallery (**lightbox**, **multi-select** ⌘/⇧-click with batch **Delete (Trash) /
+Export / Move to Library**, **switchable named libraries** persisted + reloaded
+via embedded metadata, **Reuse Prompt / Reuse All Parameters / Use as Init Image
+/ Upscale…** + Copy Prompt/Negative from context menu, inspector, and lightbox)
+with live progress. Selection is a `Set<id>` (anchor for ⇧-range); single-tap
+select + a *simultaneous* double-tap lightbox avoids selection lag. **img2img** =
+`init` + `strength` on the serve request;
 **Upscale…** runs one-shot `image-forge upscale` (native ×4, mutually exclusive
 with generation). inpaint / ControlNet / LoRA + model management stay in the CLI.
 

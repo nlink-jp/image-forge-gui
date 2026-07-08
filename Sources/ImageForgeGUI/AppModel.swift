@@ -12,10 +12,13 @@ final class AppModel: ObservableObject {
     // Model list (Composer picker).
     @Published var models: [ModelInfo] = []
 
-    // Session gallery (newest first) + selection (shared so File menu commands
-    // can act on the selected image).
+    // Session gallery (newest first) + selection (shared so File-menu commands and
+    // the gallery batch actions can act on the selection). Multi-select: plain
+    // click replaces, ⌘-click toggles, ⇧-click extends a range from the anchor.
     @Published var results: [GeneratedImage] = []
-    @Published var selectedID: GeneratedImage.ID?
+    @Published var selection: Set<GeneratedImage.ID> = []
+    // Anchor for ⇧-click range selection (the last plainly-clicked/toggled id).
+    private var selectionAnchor: GeneratedImage.ID?
 
     // Live status.
     @Published var isGenerating = false
@@ -66,8 +69,53 @@ final class AppModel: ObservableObject {
     @Published private(set) var libraries: [Library] = []
     @Published private(set) var activeLibraryID: Library.ID
 
-    /// The currently-selected gallery image, if any.
-    var selectedImage: GeneratedImage? { results.first { $0.id == selectedID } }
+    /// The selected images, in gallery order (newest first).
+    var selectedImages: [GeneratedImage] { results.filter { selection.contains($0.id) } }
+
+    /// The single selected image, or nil when zero or many are selected (the
+    /// bottom inspector shows details only for a lone selection).
+    var selectedImage: GeneratedImage? {
+        selection.count == 1 ? results.first { selection.contains($0.id) } : nil
+    }
+
+    // MARK: - Selection
+
+    /// Plain click: select only this image (and set it as the range anchor).
+    func selectOnly(_ id: GeneratedImage.ID) {
+        selection = [id]
+        selectionAnchor = id
+    }
+
+    /// ⌘-click: toggle this image in/out of the selection.
+    func toggleSelection(_ id: GeneratedImage.ID) {
+        if selection.contains(id) { selection.remove(id) } else { selection.insert(id) }
+        selectionAnchor = id
+    }
+
+    /// ⇧-click: add the contiguous range from the anchor to this image.
+    func extendSelection(to id: GeneratedImage.ID) {
+        let ids = results.map(\.id)
+        guard let anchor = selectionAnchor,
+              let range = Self.rangeIDs(from: anchor, to: id, in: ids) else {
+            selectOnly(id)
+            return
+        }
+        selection.formUnion(range)
+    }
+
+    /// Select every image in the gallery.
+    func selectAll() { selection = Set(results.map(\.id)) }
+
+    /// The contiguous slice of `ids` between `anchor` and `target` (inclusive),
+    /// or nil if either is absent. Pure, so range selection is unit-testable.
+    nonisolated static func rangeIDs(
+        from anchor: GeneratedImage.ID, to target: GeneratedImage.ID, in ids: [GeneratedImage.ID]
+    ) -> [GeneratedImage.ID]? {
+        guard let a = ids.firstIndex(of: anchor), let b = ids.firstIndex(of: target) else {
+            return nil
+        }
+        return Array(ids[min(a, b)...max(a, b)])
+    }
 
     /// The active library's folder, created on demand.
     var activeLibraryURL: URL {
@@ -294,7 +342,7 @@ final class AppModel: ObservableObject {
                     prompt: image.prompt, seed: image.seed, params: params,
                     pixelWidth: size?.width, pixelHeight: size?.height)
                 self.results.insert(up, at: 0)
-                self.selectedID = up.id
+                self.selectOnly(up.id)
                 self.statusMessage = "Upscaled (\(model)) — " + self.libraryStatus(count: self.results.count)
             } catch {
                 self.errorMessage = "Upscale failed: \(error.localizedDescription)"
@@ -350,7 +398,7 @@ final class AppModel: ObservableObject {
             GeneratedImage(id: UUID(), url: url, prompt: "", seed: nil,
                            params: GenerationRequest(prompt: "", output: url.path))
         }
-        selectedID = results.first?.id
+        if let first = results.first { selectOnly(first.id) } else { selection = [] }
         guard !urls.isEmpty else { return }
 
         Task.detached(priority: .utility) { [weak self] in
@@ -461,7 +509,7 @@ final class AppModel: ObservableObject {
             pixelHeight: size?.height
         )
         results.insert(image, at: 0)
-        if selectedID == nil { selectedID = image.id }
+        if selection.isEmpty { selectOnly(image.id) }
         pending = max(0, pending - 1)
         progress = 0
         if pending == 0 { settle() }
@@ -491,9 +539,68 @@ final class AppModel: ObservableObject {
         NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: activeLibraryURL.path)
     }
 
-    /// File → Export Selected… (⌘E): copy the selected PNG to a chosen location.
-    func exportSelected() {
-        guard let img = selectedImage else { return }
+    // MARK: - Batch operations (delete / export / move)
+
+    /// Libraries other than the active one — targets for "Move to Library".
+    var otherLibraries: [Library] { libraries.filter { $0.id != activeLibraryID } }
+
+    /// Move images (by id) to the Trash and drop them from the gallery.
+    func delete(_ ids: Set<GeneratedImage.ID>) {
+        let imgs = results.filter { ids.contains($0.id) }
+        guard !imgs.isEmpty else { return }
+        var done: Set<GeneratedImage.ID> = []
+        for img in imgs {
+            do {
+                try FileManager.default.trashItem(at: img.url, resultingItemURL: nil)
+                done.insert(img.id)
+            } catch {
+                errorMessage = "Couldn't delete \(img.url.lastPathComponent): \(error.localizedDescription)"
+            }
+        }
+        results.removeAll { done.contains($0.id) }
+        selection.subtract(done)
+        if !done.isEmpty {
+            statusMessage = "Moved \(done.count) image\(done.count == 1 ? "" : "s") to Trash"
+        }
+    }
+
+    func deleteSelected() { delete(selection) }
+
+    /// Move images (by id) into another library's folder on disk and drop them
+    /// from the current gallery.
+    func move(_ ids: Set<GeneratedImage.ID>, toLibrary libID: Library.ID) {
+        guard libID != activeLibraryID, let lib = libraries.first(where: { $0.id == libID }) else { return }
+        let destDir = URL(fileURLWithPath: lib.path, isDirectory: true)
+        try? FileManager.default.createDirectory(at: destDir, withIntermediateDirectories: true)
+        let imgs = results.filter { ids.contains($0.id) }
+        var done: Set<GeneratedImage.ID> = []
+        for img in imgs {
+            let dest = Self.uniqueDestination(dir: destDir, name: img.url.lastPathComponent)
+            do {
+                try FileManager.default.moveItem(at: img.url, to: dest)
+                done.insert(img.id)
+            } catch {
+                errorMessage = "Move failed for \(img.url.lastPathComponent): \(error.localizedDescription)"
+            }
+        }
+        results.removeAll { done.contains($0.id) }
+        selection.subtract(done)
+        if !done.isEmpty {
+            statusMessage = "Moved \(done.count) image\(done.count == 1 ? "" : "s") to \(lib.name)"
+        }
+    }
+
+    /// File → Export Selected… (⌘E): copy the selection to a chosen location.
+    func exportSelected() { export(selection) }
+
+    /// Export images (by id): a save panel for one, a folder picker for several.
+    func export(_ ids: Set<GeneratedImage.ID>) {
+        let imgs = results.filter { ids.contains($0.id) }
+        guard !imgs.isEmpty else { return }
+        imgs.count == 1 ? exportOne(imgs[0]) : exportMany(imgs)
+    }
+
+    private func exportOne(_ img: GeneratedImage) {
         let panel = NSSavePanel()
         panel.nameFieldStringValue = img.url.lastPathComponent
         panel.allowedContentTypes = [.png]
@@ -504,9 +611,47 @@ final class AppModel: ObservableObject {
                 try FileManager.default.removeItem(at: dest)
             }
             try FileManager.default.copyItem(at: img.url, to: dest)
+            statusMessage = "Exported \(dest.lastPathComponent)"
         } catch {
             errorMessage = "Export failed: \(error.localizedDescription)"
         }
+    }
+
+    private func exportMany(_ imgs: [GeneratedImage]) {
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Export"
+        panel.message = "Choose a folder to export \(imgs.count) images into"
+        guard panel.runModal() == .OK, let dir = panel.url else { return }
+        var n = 0
+        for img in imgs {
+            let dest = Self.uniqueDestination(dir: dir, name: img.url.lastPathComponent)
+            do {
+                try FileManager.default.copyItem(at: img.url, to: dest)
+                n += 1
+            } catch {
+                errorMessage = "Export failed for \(img.url.lastPathComponent): \(error.localizedDescription)"
+            }
+        }
+        statusMessage = "Exported \(n) image\(n == 1 ? "" : "s")"
+    }
+
+    /// A non-colliding destination URL in `dir` for `name` (appends " 2", " 3", …).
+    nonisolated static func uniqueDestination(dir: URL, name: String) -> URL {
+        let ns = name as NSString
+        let base = ns.deletingPathExtension
+        let ext = ns.pathExtension
+        var dest = dir.appendingPathComponent(name)
+        var i = 2
+        while FileManager.default.fileExists(atPath: dest.path) {
+            let candidate = ext.isEmpty ? "\(base) \(i)" : "\(base) \(i).\(ext)"
+            dest = dir.appendingPathComponent(candidate)
+            i += 1
+        }
+        return dest
     }
 
     /// Help → ImageForgeGUI Help: open the bundled/dev README, else the repo.

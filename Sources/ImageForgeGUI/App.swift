@@ -38,7 +38,10 @@ struct AppCommands: Commands {
         CommandGroup(replacing: .saveItem) {
             Button("Export Selected…") { model.exportSelected() }
                 .keyboardShortcut("e", modifiers: .command)
-                .disabled(model.selectedImage == nil)
+                .disabled(model.selection.isEmpty)
+            Button("Delete Selected") { model.deleteSelected() }
+                .keyboardShortcut(.delete, modifiers: .command)
+                .disabled(model.selection.isEmpty)
         }
 
         // View → Refresh Models.
