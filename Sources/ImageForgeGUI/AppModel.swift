@@ -66,6 +66,32 @@ final class AppModel: ObservableObject {
     /// Installed ESRGAN upscaler models (`kind == "upscaler"`), for the Upscale sheet.
     var upscalerModels: [ModelInfo] { models.filter { ($0.kind ?? "") == "upscaler" } }
 
+    /// Installed LoRAs compatible with a base model's architecture. A LoRA is
+    /// bound to the arch it was trained against, so an SDXL LoRA must not be
+    /// offered for an SD1.5 base (ADR-0006).
+    func loras(forArch baseArch: String) -> [ModelInfo] {
+        models.filter { $0.isLoRA && $0.matchesArch(baseArch) }
+    }
+
+    /// The architecture of an installed model, or "" if unknown.
+    func arch(ofModel name: String?) -> String {
+        guard let name else { return "" }
+        return models.first { $0.name == name }?.arch ?? ""
+    }
+
+    /// Build serve's `loras` payload — one `"<path>:<weight>"` per selection.
+    /// Selections naming an unknown model, a non-LoRA, or a model with no path
+    /// are skipped. Pure, so the Composer's payload is unit-testable.
+    nonisolated static func loraPayload(
+        selections: [(name: String, weight: Double)], models: [ModelInfo]
+    ) -> [String] {
+        selections.compactMap { sel in
+            guard let m = models.first(where: { $0.name == sel.name }), m.isLoRA,
+                  let path = m.path, !path.isEmpty else { return nil }
+            return "\(path):\(String(format: "%g", sel.weight))"
+        }
+    }
+
     // Switchable libraries: the list + which one is active, mirrored from the
     // store so the Gallery's switcher can observe them. `activeLibraryURL` is
     // where new generations are written and existing PNGs are loaded from.
@@ -263,7 +289,8 @@ final class AppModel: ObservableObject {
         scheduler: String? = nil,
         clipSkip: Int? = nil,
         initPath: String? = nil,
-        strength: Double? = nil
+        strength: Double? = nil,
+        loras: [String]? = nil
     ) {
         let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -308,6 +335,7 @@ final class AppModel: ObservableObject {
                 hires: hires,
                 initPath: (initPath?.isEmpty ?? true) ? nil : initPath,
                 strength: effStrength,
+                loras: (loras?.isEmpty ?? true) ? nil : loras,
                 output: outURL.path
             )
             inFlight[outURL.path] = req

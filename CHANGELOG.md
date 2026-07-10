@@ -3,6 +3,21 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0] - unreleased
+
+### Added
+- **LoRA support in the Composer.** A new **LoRA** section stacks any number of
+  installed LoRAs, each with its own **weight** slider. The picker offers only
+  LoRAs whose architecture matches the selected base model (an SDXL LoRA is never
+  offered for an SD1.5 base), and switching base models drops the ones that no
+  longer apply. Sent as serve's `loras: ["<path>:<weight>"]` — applied per render,
+  so no model reload. When nothing compatible is installed, the section says so
+  and shows how to get one (`image-forge models pull lcm-lora-sdxl`).
+- Bundles **image-forge v0.13.0**, which makes LoRA / ControlNet first-class
+  registry kinds (so the GUI can enumerate and arch-filter them) and **fixes a
+  crash where using any LoRA killed the engine** — which, for this app's resident
+  `serve` process, would have taken generation down with it.
+
 ## [0.2.0] - 2026-07-09
 
 Completes the two features left stubbed in v0.1.0 (img2img and gallery upscale)

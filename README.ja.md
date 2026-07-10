@@ -11,7 +11,9 @@ macOS 14+（Apple silicon）。
 
 - **Composer**（左）: プロンプト／ネガティブ（サイズ変更可能なエディタ）、モデル選択
   （各モデルのアーキテクチャとカタログ上のコンテンツ評価を表示、**Safe only** トグルで
-  questionable／explicit を隠す）、**Init image** セクション＝**img2img**（画像をドロップ
+  questionable／explicit を隠す）、**LoRA** セクション（インストール済み LoRA を複数
+  重ねがけ、各 LoRA に重みスライダ。ベースモデルと**アーキテクチャが一致するものだけ**
+  を提示）、**Init image** セクション＝**img2img**（画像をドロップ
   または選択＋**strength** スライダ）、基本パラメータ（seed とランダムトグル、steps、
   CFG、幅／高さ、hires）、**Advanced** セクション（sampler／scheduler／clip-skip の
   上書き）、バッチ**枚数**。「Generate」で生成 — 生成中は **Cancel**（⌘.）に変わり、

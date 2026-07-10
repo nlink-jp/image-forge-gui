@@ -93,7 +93,8 @@ assets/                AppIcon-1024.png (→ AppIcon.icns at build)
 
 Working txt2img + **img2img** app: Composer (single/batch, **cancel** via
 terminate+relaunch serve, **Advanced** sampler/scheduler/clip-skip overrides,
-model arch + rating with **Safe only**, **Init image** drop/pick + strength) →
+model arch + rating with **Safe only**, **LoRA** stacking with per-LoRA weights
+filtered to the base model's arch, **Init image** drop/pick + strength) →
 Gallery (**lightbox**, **multi-select** ⌘/⇧-click with batch **Delete (Trash) /
 Export / Move to Library**, **switchable named libraries** persisted + reloaded
 via embedded metadata, **Reuse Prompt / Reuse All Parameters / Use as Init Image

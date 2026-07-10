@@ -33,6 +33,14 @@ enum HiresMode: String, CaseIterable, Identifiable {
     }
 }
 
+/// One LoRA selection in the Composer: which installed LoRA, and its weight.
+/// LoRAs are applied per render (no model reload), so several can be stacked.
+struct LoRARow: Identifiable, Equatable {
+    let id = UUID()
+    var name: String
+    var weight: Double = 1.0
+}
+
 /// The left-hand composer: prompt, negative, model, and the core generation
 /// parameters. Numeric fields left blank mean "use the model profile default".
 struct ComposerView: View {
@@ -54,6 +62,7 @@ struct ComposerView: View {
     @State private var clipSkipOverride = 0    // 0 = model profile default
     @State private var initImageURL: URL?      // set => img2img
     @State private var strength: Double = 0.6  // img2img denoise strength
+    @State private var loraRows: [LoRARow] = []
     /// Hide questionable/explicit models from the picker when on.
     @AppStorage("safeOnly") private var safeOnly = false
 
@@ -117,6 +126,10 @@ struct ComposerView: View {
                 }
                 .disabled(diffusionModels.isEmpty)
                 Toggle("Safe only (hide questionable / explicit)", isOn: $safeOnly)
+            }
+
+            Section("LoRA") {
+                loraControl
             }
 
             Section("Init image (img2img)") {
@@ -185,13 +198,98 @@ struct ComposerView: View {
         }
         .formStyle(.grouped)
         .onAppear(perform: syncSelectedModel)
-        .onChange(of: model.models) { _, _ in syncSelectedModel() }
+        .onChange(of: model.models) { _, _ in syncSelectedModel(); pruneIncompatibleLoRAs() }
         .onChange(of: safeOnly) { _, _ in syncSelectedModel() }
+        // A LoRA is bound to its base architecture — switching models drops the
+        // ones that no longer apply.
+        .onChange(of: selectedModel) { _, _ in pruneIncompatibleLoRAs() }
         .onChange(of: model.newGenerationTick) { _, _ in resetComposer() }
         .onChange(of: model.reuseTick) { _, _ in applyReuse() }
         .onChange(of: model.setInitTick) { _, _ in
             if let u = model.pendingInitURL { initImageURL = u }
         }
+    }
+
+    // MARK: - LoRA
+
+    /// The base model's architecture (LoRAs are bound to it).
+    private var selectedArch: String { model.arch(ofModel: selectedModel) }
+
+    /// Installed LoRAs compatible with the selected base model.
+    private var compatibleLoRAs: [ModelInfo] {
+        selectedModel == nil ? [] : model.loras(forArch: selectedArch)
+    }
+
+    /// Compatible LoRAs not already stacked (so each is offered once).
+    private var unusedLoRAs: [ModelInfo] {
+        let used = Set(loraRows.map(\.name))
+        return compatibleLoRAs.filter { !used.contains($0.name) }
+    }
+
+    /// The `loras` payload sent to serve: "<path>:<weight>" per row.
+    private var loraPayload: [String] {
+        AppModel.loraPayload(
+            selections: loraRows.map { (name: $0.name, weight: $0.weight) },
+            models: model.models)
+    }
+
+    @ViewBuilder private var loraControl: some View {
+        if compatibleLoRAs.isEmpty {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(selectedModel == nil
+                     ? "Select a model first."
+                     : "No LoRAs installed for \(selectedArch.uppercased()).")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text("Install one with:  image-forge models pull lcm-lora-sdxl")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .textSelection(.enabled)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            ForEach($loraRows) { $row in
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Picker("", selection: $row.name) {
+                            ForEach(compatibleLoRAs) { Text($0.name).tag($0.name) }
+                        }
+                        .labelsHidden()
+                        Button {
+                            loraRows.removeAll { $0.id == row.id }
+                        } label: {
+                            Image(systemName: "minus.circle")
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Remove this LoRA")
+                    }
+                    HStack(spacing: 8) {
+                        Text("Weight").font(.caption).foregroundStyle(.secondary)
+                        Slider(value: $row.weight, in: 0...1.5, step: 0.05)
+                        Text(String(format: "%.2f", row.weight))
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                            .frame(width: 34, alignment: .trailing)
+                    }
+                }
+            }
+            Button { addLoRA() } label: {
+                Label("Add LoRA", systemImage: "plus")
+            }
+            .buttonStyle(.bordered)
+            .disabled(unusedLoRAs.isEmpty)
+        }
+    }
+
+    private func addLoRA() {
+        guard let next = unusedLoRAs.first else { return }
+        loraRows.append(LoRARow(name: next.name))
+    }
+
+    /// Drop stacked LoRAs that don't match the (newly selected) base model's arch.
+    private func pruneIncompatibleLoRAs() {
+        let ok = Set(compatibleLoRAs.map(\.name))
+        loraRows.removeAll { !ok.contains($0.name) }
     }
 
     /// The init-image control shown in the "Init image (img2img)" section: a
@@ -261,6 +359,7 @@ struct ComposerView: View {
         clipSkipOverride = 0
         initImageURL = nil
         strength = 0.6
+        loraRows = []
         randomSeed = true
         promptFocused = true
     }
@@ -317,7 +416,8 @@ struct ComposerView: View {
             scheduler: schedulerOverride.isEmpty ? nil : schedulerOverride,
             clipSkip: clipSkipOverride == 0 ? nil : clipSkipOverride,
             initPath: initImageURL?.path,
-            strength: initImageURL == nil ? nil : strength
+            strength: initImageURL == nil ? nil : strength,
+            loras: loraPayload.isEmpty ? nil : loraPayload
         )
     }
 

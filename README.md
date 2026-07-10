@@ -11,7 +11,9 @@ macOS 14+ (Apple silicon).
 
 - **Composer** (left): prompt / negative (resizable editors), a model picker
   showing each model's architecture and catalog content rating with a **Safe
-  only** toggle (hide questionable / explicit), an **Init image** section for
+  only** toggle (hide questionable / explicit), a **LoRA** section (stack
+  installed LoRAs with per-LoRA weight sliders; only architecture-compatible ones
+  are offered), an **Init image** section for
   **img2img** (drop or choose an image + a **strength** slider), core parameters
   (seed with a random toggle, steps, CFG, width/height, hires), an **Advanced**
   section (sampler / scheduler / clip-skip overrides), and a batch **count**.

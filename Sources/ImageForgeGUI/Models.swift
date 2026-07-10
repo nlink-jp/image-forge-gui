@@ -27,6 +27,10 @@ struct GenerationRequest: Codable, Equatable {
     var hires: String? = nil        // "auto" | "on" | "off"
     var initPath: String? = nil     // json: init — img2img source image
     var strength: Double? = nil     // img2img denoise strength
+    /// LoRAs to apply, each `"<path>:<weight>"`. Applied per render (no model
+    /// reload). We send resolved file paths rather than registry names so an
+    /// older bundled CLI (which can't resolve names) still works.
+    var loras: [String]? = nil
     var output: String              // absolute path the engine writes the PNG to
 
     enum CodingKeys: String, CodingKey {
@@ -35,7 +39,7 @@ struct GenerationRequest: Codable, Equatable {
         case clipSkip = "clip_skip"
         case batch, hires
         case initPath = "init"
-        case strength, output
+        case strength, loras, output
     }
 }
 
@@ -79,9 +83,20 @@ struct ModelInfo: Codable, Identifiable, Equatable {
 
     var id: String { name }
 
-    /// True for a diffusion model (an empty/absent `kind`), false for an
-    /// upscaler — the Composer's model picker offers diffusion models only.
+    /// True for a base diffusion model (an empty/absent `kind`) — the Composer's
+    /// model picker offers these only. The rest are auxiliary kinds (ADR-0006).
     var isDiffusion: Bool { (kind ?? "").isEmpty }
+
+    /// A LoRA adapter, bound to the base `arch` it was trained against.
+    var isLoRA: Bool { kind == "lora" }
+
+    /// A ControlNet model, bound to the base `arch` it was trained against.
+    var isControlNet: Bool { kind == "controlnet" }
+
+    /// Whether this auxiliary model is compatible with a base model's architecture.
+    func matchesArch(_ baseArch: String) -> Bool {
+        arch.caseInsensitiveCompare(baseArch) == .orderedSame
+    }
 
     enum CodingKeys: String, CodingKey {
         case name, arch, rating, license, path, kind
