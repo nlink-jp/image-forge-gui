@@ -3,7 +3,7 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [0.3.0] - unreleased
+## [0.3.0] - 2026-07-09
 
 ### Added
 - **LoRA support in the Composer.** A new **LoRA** section stacks any number of
@@ -130,5 +130,6 @@ reuse, and switchable libraries.
   are stubbed in the UI (marked TODO in the code). inpaint / ControlNet and model
   management stay in the CLI.
 
+[0.3.0]: https://github.com/nlink-jp/image-forge-gui/releases/tag/v0.3.0
 [0.2.0]: https://github.com/nlink-jp/image-forge-gui/releases/tag/v0.2.0
 [0.1.0]: https://github.com/nlink-jp/image-forge-gui/releases/tag/v0.1.0
