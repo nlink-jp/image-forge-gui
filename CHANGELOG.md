@@ -13,10 +13,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   longer apply. Sent as serve's `loras: ["<path>:<weight>"]` — applied per render,
   so no model reload. When nothing compatible is installed, the section says so
   and shows how to get one (`image-forge models pull lcm-lora-sdxl`).
-- Bundles **image-forge v0.13.0**, which makes LoRA / ControlNet first-class
-  registry kinds (so the GUI can enumerate and arch-filter them) and **fixes a
-  crash where using any LoRA killed the engine** — which, for this app's resident
-  `serve` process, would have taken generation down with it.
+- Bundles **image-forge v0.13.1**, which:
+  - makes LoRA / ControlNet first-class registry kinds (so the GUI can enumerate
+    and arch-filter them);
+  - **fixes a crash where using any LoRA killed the engine** — which, for this
+    app's resident `serve` process, would have taken generation down with it;
+  - **stops embedding filesystem paths in generated PNGs.** Images written by this
+    app previously carried absolute paths — including
+    `img2img.init: /Users/<you>/…` — which leaked your username to anyone the
+    image was shared with. Models are now recorded by name. Images generated
+    before this keep their old metadata; re-generate to clean them.
 
 ## [0.2.0] - 2026-07-09
 
