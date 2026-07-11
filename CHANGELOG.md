@@ -3,7 +3,7 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [0.5.0] - unreleased
+## [0.5.0] - 2026-07-11
 
 ### Added
 - **ControlNet section in the Composer.** Steer generation by a control image's
