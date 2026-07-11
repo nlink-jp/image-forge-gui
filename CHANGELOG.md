@@ -3,7 +3,7 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.6.1] - 2026-07-11
 
 ### Changed
 - **Manage Models "Remove" now passes `--confirmed-by-frontend`** to `models rm
