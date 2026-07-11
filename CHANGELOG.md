@@ -3,7 +3,7 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.7.0] - 2026-07-11
 
 ### Added
 - **Rename a library** from the switcher (folder menu → Rename…). Changes the
@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - The batch **Count** control is now a slider (1–16) instead of a stepper — easier
   to read and set at a glance. Same 1–16 range and behavior.
+- Bundles **image-forge v0.20.0** (Flux/SD3.5 guidance controls in the CLI).
 
 ## [0.6.2] - 2026-07-11
 
