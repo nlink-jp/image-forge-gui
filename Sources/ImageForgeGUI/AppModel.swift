@@ -74,8 +74,8 @@ final class AppModel: ObservableObject {
     }
 
     /// Installed ControlNets compatible with a base model's architecture — bound to
-    /// the base arch exactly like a LoRA (ADR-0006). Currently only SD1.5 ships, so
-    /// this is empty for SDXL/other bases until an SDXL ControlNet is added.
+    /// the base arch exactly like a LoRA (ADR-0006). The catalog ships SD1.5 and SDXL
+    /// canny ControlNets; this is empty for an arch with none installed.
     func controlNetModels(forArch baseArch: String) -> [ModelInfo] {
         models.filter { $0.isControlNet && $0.matchesArch(baseArch) }
     }

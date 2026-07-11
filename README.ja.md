@@ -16,7 +16,8 @@ macOS 14+（Apple silicon）。
   を提示。**トリガーワードを表示し、プロンプトへ自動挿入**）、**Init image**
   セクション＝**img2img**（画像をドロップ
   または選択＋**strength** スライダ）、**ControlNet** セクション（アーキ互換の
-  ControlNet ＋制御画像を選び、**strength** スライダと **Canny** トグル。現状 SD1.5 のみ）、
+  ControlNet ＋制御画像を選び、**strength** スライダと **Canny** トグル。アーキ絞り込み
+  なので SDXL base には SDXL ControlNet、SD1.5 base には SD1.5 を提示）、
   基本パラメータ（seed とランダムトグル、steps、
   CFG、幅／高さ、hires）、**Advanced** セクション（sampler／scheduler／clip-skip の
   上書き）、バッチ**枚数**。**License** セクションはベースモデル・使用中 LoRA・ControlNet の
@@ -85,13 +86,13 @@ make test
 ## 状況
 
 動作する txt2img **＋ img2img** アプリ。Composer（単発＋バッチ、中止、Advanced 上書き、
-初期画像）→ Gallery（ライトボックス、プロンプト／全パラメータ再利用、use-as-init、
-ESRGAN アップスケール、切替可能なライブラリ）をライブ進捗つきで提供。再利用は現在の
-セッションでも、ライブラリフォルダから読み込んだ画像（埋め込みメタデータから復元）でも
-動作します。
+初期画像、LoRA 重ねがけ、ControlNet、License/クレジット欄）→ Gallery（ライトボックス、
+プロンプト／全パラメータ再利用、use-as-init、ESRGAN アップスケール、切替可能なライブラリ）
+をライブ進捗つきで提供。再利用は現在のセッションでも、ライブラリフォルダから読み込んだ
+画像（埋め込みメタデータから復元）でも動作します。
 
-**CLI 側のまま:** inpaint / ControlNet / LoRA とモデル管理（本アプリは txt2img／img2img
-用の `serve` エンジンと、単発の `upscale` を駆動します）。
+**CLI 側のまま:** inpaint とモデル管理（本アプリは LoRA + ControlNet 付きの txt2img／
+img2img 用 `serve` エンジンと、単発の `upscale` を駆動します）。
 
 ## なぜ Swift（ネイティブ macOS）
 

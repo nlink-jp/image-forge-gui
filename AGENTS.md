@@ -24,7 +24,7 @@ make test       # swift test
 Sources/ImageForgeGUI/
   App.swift            @main; WindowGroup { ContentView } + AppCommands (menu bar)
   ContentView.swift    HSplitView: Composer | Gallery, + bottom StatusBar
-  ComposerView.swift   prompt/negative/model/params/count/hires + Generate
+  ComposerView.swift   prompt/negative/model/LoRA/init-image/ControlNet/params/advanced/License/count/hires + Generate
   GalleryView.swift    library switcher header + LazyVGrid thumbnails +
                        selection InspectorBar + context menu + lightbox
   AppModel.swift       @MainActor ObservableObject: ServeClient owner, models,
@@ -94,7 +94,9 @@ assets/                AppIcon-1024.png (→ AppIcon.icns at build)
 Working txt2img + **img2img** app: Composer (single/batch, **cancel** via
 terminate+relaunch serve, **Advanced** sampler/scheduler/clip-skip overrides,
 model arch + rating with **Safe only**, **LoRA** stacking with per-LoRA weights
-filtered to the base model's arch, **Init image** drop/pick + strength) →
+filtered to the base model's arch, **Init image** drop/pick + strength,
+**ControlNet** arch-filtered pick + control image + strength + Canny, **License**
+panel showing the base/LoRA/ControlNet license + the attribution credit) →
 Gallery (**lightbox**, **multi-select** ⌘/⇧-click with batch **Delete (Trash) /
 Export / Move to Library**, **switchable named libraries** persisted + reloaded
 via embedded metadata, **Reuse Prompt / Reuse All Parameters / Use as Init Image
@@ -103,7 +105,7 @@ with live progress. Selection is a `Set<id>` (anchor for ⇧-range); single-tap
 select + a *simultaneous* double-tap lightbox avoids selection lag. **img2img** =
 `init` + `strength` on the serve request;
 **Upscale…** runs one-shot `image-forge upscale` (native ×4, mutually exclusive
-with generation). inpaint / ControlNet / LoRA + model management stay in the CLI.
+with generation). inpaint + model management stay in the CLI.
 
 ## Design reference
 

@@ -17,7 +17,8 @@ macOS 14+ (Apple silicon).
   **Init image** section for
   **img2img** (drop or choose an image + a **strength** slider), a **ControlNet**
   section (pick an architecture-compatible ControlNet + a control image, with a
-  **strength** slider and a **Canny** toggle; SD1.5 only for now), core parameters
+  **strength** slider and a **Canny** toggle — arch-filtered, so an SDXL base gets
+  the SDXL ControlNet and an SD1.5 base the SD1.5 one), core parameters
   (seed with a random toggle, steps, CFG, width/height, hires), an **Advanced**
   section (sampler / scheduler / clip-skip overrides), and a batch **count**.
   A **License** section always shows the license of the base model, each LoRA, and
@@ -90,13 +91,13 @@ make test
 ## Status
 
 A working txt2img **and img2img** app: Composer (single + batch, cancel, advanced
-overrides, init image) → Gallery (lightbox, prompt / full-parameter reuse,
-use-as-init, ESRGAN upscale, switchable libraries) with live progress. Reuse
-works both for the current session and for images reloaded from a library folder
-(reconstructed from embedded metadata).
+overrides, init image, LoRA stacking, ControlNet, License/credit panel) → Gallery
+(lightbox, prompt / full-parameter reuse, use-as-init, ESRGAN upscale, switchable
+libraries) with live progress. Reuse works both for the current session and for
+images reloaded from a library folder (reconstructed from embedded metadata).
 
-**Stays in the CLI:** inpaint / ControlNet / LoRA and model management (this app
-drives the `serve` engine for txt2img / img2img plus one-shot `upscale`).
+**Stays in the CLI:** inpaint and model management (this app drives the `serve`
+engine for txt2img / img2img with LoRA + ControlNet, plus one-shot `upscale`).
 
 ## Why Swift (native macOS)
 
