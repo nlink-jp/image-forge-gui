@@ -24,9 +24,26 @@ final class GenerationRequestTests: XCTestCase {
 
         // Unset optionals must be absent entirely.
         for key in ["negative", "cfg", "width", "height", "sampler", "scheduler",
-                    "clip_skip", "batch", "init", "strength"] {
+                    "clip_skip", "batch", "init", "strength",
+                    "control_net", "control", "control_strength", "canny"] {
             XCTAssertNil(obj[key], "expected \(key) to be omitted")
         }
+    }
+
+    /// ControlNet fields map to serve's snake_case keys, and Swift names never leak.
+    func testControlNetCodingKeys() throws {
+        var req = GenerationRequest(prompt: "x", output: "/tmp/o.png")
+        req.controlNet = "/m/canny.safetensors"
+        req.control = "/tmp/edge.png"
+        req.controlStrength = 0.9
+        req.canny = true
+        let obj = try object(req)
+        XCTAssertEqual(obj["control_net"] as? String, "/m/canny.safetensors")
+        XCTAssertEqual(obj["control"] as? String, "/tmp/edge.png")
+        XCTAssertEqual(obj["control_strength"] as? Double, 0.9)
+        XCTAssertEqual(obj["canny"] as? Bool, true)
+        XCTAssertNil(obj["controlNet"])
+        XCTAssertNil(obj["controlStrength"])
     }
 
     /// clip_skip / init are custom coding keys; verify they map correctly and the

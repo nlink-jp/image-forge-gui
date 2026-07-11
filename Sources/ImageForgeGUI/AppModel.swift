@@ -73,6 +73,13 @@ final class AppModel: ObservableObject {
         models.filter { $0.isLoRA && $0.matchesArch(baseArch) }
     }
 
+    /// Installed ControlNets compatible with a base model's architecture — bound to
+    /// the base arch exactly like a LoRA (ADR-0006). Currently only SD1.5 ships, so
+    /// this is empty for SDXL/other bases until an SDXL ControlNet is added.
+    func controlNetModels(forArch baseArch: String) -> [ModelInfo] {
+        models.filter { $0.isControlNet && $0.matchesArch(baseArch) }
+    }
+
     /// The architecture of an installed model, or "" if unknown.
     func arch(ofModel name: String?) -> String {
         guard let name else { return "" }
@@ -145,6 +152,19 @@ final class AppModel: ObservableObject {
                   let path = m.path, !path.isEmpty else { return nil }
             return "\(path):\(String(format: "%g", sel.weight))"
         }
+    }
+
+    /// Resolve a selected ControlNet name to serve's `control_net` value — the
+    /// model's file path (like `loraPayload`, we send a path so an older bundled
+    /// CLI still works). nil when unnamed, unknown, not a ControlNet, or pathless.
+    /// Pure, so the Composer's payload is unit-testable.
+    nonisolated static func controlNetPath(
+        name: String?, models: [ModelInfo]
+    ) -> String? {
+        guard let name,
+              let m = models.first(where: { $0.name == name }), m.isControlNet,
+              let path = m.path, !path.isEmpty else { return nil }
+        return path
     }
 
     // Switchable libraries: the list + which one is active, mirrored from the
@@ -345,7 +365,11 @@ final class AppModel: ObservableObject {
         clipSkip: Int? = nil,
         initPath: String? = nil,
         strength: Double? = nil,
-        loras: [String]? = nil
+        loras: [String]? = nil,
+        controlNet: String? = nil,
+        control: String? = nil,
+        controlStrength: Double? = nil,
+        canny: Bool? = nil
     ) {
         let trimmed = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -356,6 +380,9 @@ final class AppModel: ObservableObject {
         }
         // Strength only means anything alongside an init image (img2img).
         let effStrength = (initPath?.isEmpty ?? true) ? nil : strength
+        // ControlNet needs both a model and a control image — send the group only
+        // when complete, so a half-configured ControlNet never reaches the engine.
+        let hasControl = !(controlNet?.isEmpty ?? true) && !(control?.isEmpty ?? true)
 
         let n = max(1, count)
         isGenerating = true
@@ -390,6 +417,10 @@ final class AppModel: ObservableObject {
                 hires: hires,
                 initPath: (initPath?.isEmpty ?? true) ? nil : initPath,
                 strength: effStrength,
+                controlNet: hasControl ? controlNet : nil,
+                control: hasControl ? control : nil,
+                controlStrength: hasControl ? controlStrength : nil,
+                canny: hasControl ? canny : nil,
                 loras: (loras?.isEmpty ?? true) ? nil : loras,
                 output: outURL.path
             )

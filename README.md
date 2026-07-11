@@ -15,11 +15,13 @@ macOS 14+ (Apple silicon).
   installed LoRAs with per-LoRA weight sliders; only architecture-compatible ones
   are offered; **trigger words are shown and auto-inserted into the prompt**), an
   **Init image** section for
-  **img2img** (drop or choose an image + a **strength** slider), core parameters
+  **img2img** (drop or choose an image + a **strength** slider), a **ControlNet**
+  section (pick an architecture-compatible ControlNet + a control image, with a
+  **strength** slider and a **Canny** toggle; SD1.5 only for now), core parameters
   (seed with a random toggle, steps, CFG, width/height, hires), an **Advanced**
   section (sampler / scheduler / clip-skip overrides), and a batch **count**.
-  A **License** section always shows the license of the base model and each LoRA
-  in use, highlighting any with notable restrictions (non-commercial, no-derivatives,
+  A **License** section always shows the license of the base model, each LoRA, and
+  the ControlNet in use, highlighting any with notable restrictions (non-commercial, no-derivatives,
   …); when a model requires attribution it also shows the **credit to include**
   (a copyable box) — the same text image-forge records in the image metadata.
   Press **Generate** — it turns into **Cancel** (⌘.) while running, which stops

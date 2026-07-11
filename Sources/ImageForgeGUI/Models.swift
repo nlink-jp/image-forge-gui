@@ -27,6 +27,13 @@ struct GenerationRequest: Codable, Equatable {
     var hires: String? = nil        // "auto" | "on" | "off"
     var initPath: String? = nil     // json: init — img2img source image
     var strength: Double? = nil     // img2img denoise strength
+    /// ControlNet model to steer generation (json: control_net). A resolved file
+    /// path (so an older bundled CLI that can't resolve names still works). Loaded
+    /// with the base model — changing it reloads the base (ADR-0006).
+    var controlNet: String? = nil
+    var control: String? = nil          // control image, absolute path
+    var controlStrength: Double? = nil  // json: control_strength
+    var canny: Bool? = nil              // edge-preprocess the control image
     /// LoRAs to apply, each `"<path>:<weight>"`. Applied per render (no model
     /// reload). We send resolved file paths rather than registry names so an
     /// older bundled CLI (which can't resolve names) still works.
@@ -39,7 +46,12 @@ struct GenerationRequest: Codable, Equatable {
         case clipSkip = "clip_skip"
         case batch, hires
         case initPath = "init"
-        case strength, loras, output
+        case strength
+        case controlNet = "control_net"
+        case control
+        case controlStrength = "control_strength"
+        case canny
+        case loras, output
     }
 }
 

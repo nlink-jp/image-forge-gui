@@ -63,6 +63,10 @@ struct ComposerView: View {
     @State private var initImageURL: URL?      // set => img2img
     @State private var strength: Double = 0.6  // img2img denoise strength
     @State private var loraRows: [LoRARow] = []
+    @State private var controlNetName: String?      // set + a control image => ControlNet
+    @State private var controlImageURL: URL?
+    @State private var controlStrength: Double = 0.9 // matches gen's --control-strength default
+    @State private var canny = false                 // edge-preprocess the control image
     /// Hide questionable/explicit models from the picker when on.
     @AppStorage("safeOnly") private var safeOnly = false
     /// Merge the selected LoRAs' trigger words into the prompt at generation time
@@ -139,6 +143,10 @@ struct ComposerView: View {
                 initImageControl
             }
 
+            Section("ControlNet") {
+                controlNetControl
+            }
+
             Section("Parameters") {
                 Toggle("Random seed", isOn: $randomSeed)
                 if !randomSeed {
@@ -213,11 +221,11 @@ struct ComposerView: View {
         }
         .formStyle(.grouped)
         .onAppear(perform: syncSelectedModel)
-        .onChange(of: model.models) { _, _ in syncSelectedModel(); pruneIncompatibleLoRAs() }
+        .onChange(of: model.models) { _, _ in syncSelectedModel(); pruneIncompatibleAuxModels() }
         .onChange(of: safeOnly) { _, _ in syncSelectedModel() }
-        // A LoRA is bound to its base architecture — switching models drops the
-        // ones that no longer apply.
-        .onChange(of: selectedModel) { _, _ in pruneIncompatibleLoRAs() }
+        // A LoRA / ControlNet is bound to its base architecture — switching models
+        // drops the ones that no longer apply.
+        .onChange(of: selectedModel) { _, _ in pruneIncompatibleAuxModels() }
         .onChange(of: model.newGenerationTick) { _, _ in resetComposer() }
         .onChange(of: model.reuseTick) { _, _ in applyReuse() }
         .onChange(of: model.setInitTick) { _, _ in
@@ -346,7 +354,8 @@ struct ComposerView: View {
 
     // MARK: - License
 
-    /// The base model + stacked LoRAs currently in use, for the License section.
+    /// The base model + stacked LoRAs + the selected ControlNet currently in use,
+    /// for the License section (so a ControlNet's license/credit surfaces too).
     private var modelsInUse: [ModelInfo] {
         var out: [ModelInfo] = []
         if let sel = selectedModel, let m = model.models.first(where: { $0.name == sel }) {
@@ -354,6 +363,9 @@ struct ComposerView: View {
         }
         for row in loraRows {
             if let m = model.models.first(where: { $0.name == row.name }) { out.append(m) }
+        }
+        if let cn = controlNetName, let m = model.models.first(where: { $0.name == cn }) {
+            out.append(m)
         }
         return out
     }
@@ -466,9 +478,16 @@ struct ComposerView: View {
     }
 
     /// Drop stacked LoRAs that don't match the (newly selected) base model's arch.
-    private func pruneIncompatibleLoRAs() {
-        let ok = Set(compatibleLoRAs.map(\.name))
-        loraRows.removeAll { !ok.contains($0.name) }
+    /// Drop any selected LoRA or ControlNet that no longer matches the base model's
+    /// architecture (called when the base model or the installed set changes) — an
+    /// SDXL aux model must not linger when the base switches to SD1.5 (ADR-0006).
+    private func pruneIncompatibleAuxModels() {
+        let okLoRA = Set(compatibleLoRAs.map(\.name))
+        loraRows.removeAll { !okLoRA.contains($0.name) }
+        if let cn = controlNetName,
+           !compatibleControlNets.contains(where: { $0.name == cn }) {
+            controlNetName = nil
+        }
     }
 
     /// The init-image control shown in the "Init image (img2img)" section: a
@@ -516,6 +535,79 @@ struct ComposerView: View {
         }
     }
 
+    /// Installed ControlNets compatible with the selected base model (arch-bound).
+    private var compatibleControlNets: [ModelInfo] {
+        selectedModel == nil ? [] : model.controlNetModels(forArch: selectedArch)
+    }
+
+    /// The ControlNet section: pick an arch-compatible ControlNet + a control image
+    /// to steer generation by its structure. Single-select (one model + one image).
+    /// Only SD1.5 ships today, so this is empty unless an SD1.5 base is selected.
+    @ViewBuilder private var controlNetControl: some View {
+        if compatibleControlNets.isEmpty {
+            Text(selectedModel == nil
+                 ? "Select a model first."
+                 : "No ControlNet installed for this model's architecture. Pull one — e.g. `image-forge models pull controlnet-canny-sd15` (SD1.5 only for now).")
+                .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            Picker("ControlNet", selection: $controlNetName) {
+                Text("None").tag(String?.none)
+                ForEach(compatibleControlNets) { m in Text(m.name).tag(String?.some(m.name)) }
+            }
+            if controlNetName != nil {
+                controlImagePicker
+                HStack(spacing: 8) {
+                    Text("Strength").font(.caption).foregroundStyle(.secondary)
+                    Slider(value: $controlStrength, in: 0.0...1.0, step: 0.05)
+                    Text(String(format: "%.2f", controlStrength))
+                        .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                        .frame(width: 34, alignment: .trailing)
+                }
+                Toggle("Canny edge preprocessing", isOn: $canny)
+                    .font(.callout)
+                Text("Canny extracts edges from the control image; turn it off if the image is already an edge/structure map. Switching the ControlNet reloads the base model.")
+                    .font(.caption2).foregroundStyle(.tertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    /// Control-image drop/choose target (mirrors the init-image control), shown once
+    /// a ControlNet model is selected.
+    @ViewBuilder private var controlImagePicker: some View {
+        if let url = controlImageURL {
+            HStack(alignment: .top, spacing: 10) {
+                AsyncImage(url: url) { $0.resizable().aspectRatio(contentMode: .fit) }
+                    placeholder: { ProgressView() }
+                    .frame(width: 64, height: 64)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(.secondary.opacity(0.3)))
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(url.lastPathComponent).font(.caption).lineLimit(1).truncationMode(.middle)
+                    Button("Clear") { controlImageURL = nil }.controlSize(.small)
+                }
+                Spacer()
+            }
+            .dropDestination(for: URL.self) { urls, _ in
+                guard let u = urls.first(where: isImageFile) else { return false }
+                controlImageURL = u
+                return true
+            }
+        } else {
+            Button { chooseControlImage() } label: {
+                Label("Choose or drop a control image…", systemImage: "photo.badge.plus")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .dropDestination(for: URL.self) { urls, _ in
+                guard let u = urls.first(where: isImageFile) else { return false }
+                controlImageURL = u
+                return true
+            }
+        }
+    }
+
     /// Default the picker to the first diffusion model once the list loads.
     private func syncSelectedModel() {
         if selectedModel == nil || !diffusionModels.contains(where: { $0.name == selectedModel }) {
@@ -539,6 +631,10 @@ struct ComposerView: View {
         initImageURL = nil
         strength = 0.6
         loraRows = []
+        controlNetName = nil
+        controlImageURL = nil
+        controlStrength = 0.9
+        canny = false
         randomSeed = true
         promptFocused = true
     }
@@ -574,6 +670,22 @@ struct ComposerView: View {
             } else {
                 initImageURL = nil
             }
+            // Restore ControlNet by mapping the recorded path back to its registry
+            // name (the request stores a path; the picker binds to the name).
+            if let cnPath = p.controlNet, !cnPath.isEmpty,
+               let cn = model.models.first(where: { $0.isControlNet && $0.path == cnPath }) {
+                controlNetName = cn.name
+                if let ci = p.control, !ci.isEmpty, FileManager.default.fileExists(atPath: ci) {
+                    controlImageURL = URL(fileURLWithPath: ci)
+                } else {
+                    controlImageURL = nil
+                }
+                controlStrength = p.controlStrength ?? 0.9
+                canny = p.canny ?? false
+            } else {
+                controlNetName = nil
+                controlImageURL = nil
+            }
         }
         promptFocused = true
     }
@@ -596,7 +708,11 @@ struct ComposerView: View {
             clipSkip: clipSkipOverride == 0 ? nil : clipSkipOverride,
             initPath: initImageURL?.path,
             strength: initImageURL == nil ? nil : strength,
-            loras: loraPayload.isEmpty ? nil : loraPayload
+            loras: loraPayload.isEmpty ? nil : loraPayload,
+            controlNet: AppModel.controlNetPath(name: controlNetName, models: model.models),
+            control: controlImageURL?.path,
+            controlStrength: controlStrength,
+            canny: canny
         )
     }
 
@@ -610,6 +726,18 @@ struct ComposerView: View {
         panel.prompt = "Choose"
         panel.message = "Choose an init image for img2img"
         if panel.runModal() == .OK, let url = panel.url { initImageURL = url }
+    }
+
+    /// Present an open panel to pick a ControlNet control image.
+    private func chooseControlImage() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.png, .jpeg, .image]
+        panel.prompt = "Choose"
+        panel.message = "Choose a ControlNet control image"
+        if panel.runModal() == .OK, let url = panel.url { controlImageURL = url }
     }
 
     /// True for a file URL with a raster-image extension (drop filter).

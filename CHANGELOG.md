@@ -3,6 +3,21 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.0] - unreleased
+
+### Added
+- **ControlNet section in the Composer.** Steer generation by a control image's
+  structure: pick an **architecture-compatible ControlNet** (arch-filtered to the
+  base model, like LoRAs — an SDXL base is never offered an SD1.5 ControlNet),
+  drop or choose a **control image**, set a **strength**, and toggle **Canny edge
+  preprocessing**. The control model's license/credit shows in the License section
+  like any other model, and a note flags that switching the ControlNet reloads the
+  base model. Only **SD1.5** ControlNet ships today (`controlnet-canny-sd15`); the
+  section is empty for a base with no compatible ControlNet and points at
+  `models pull`. Sent over the existing serve protocol (`control_net` / `control` /
+  `control_strength` / `canny`) — the fields go out only as a complete set.
+- Bundles **image-forge v0.16.0** (the first ControlNet catalog entry).
+
 ## [0.4.1] - 2026-07-11
 
 ### Fixed
