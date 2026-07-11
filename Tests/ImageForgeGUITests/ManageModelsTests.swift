@@ -89,8 +89,10 @@ final class ManageModelsTests: XCTestCase {
 
     func testRemoveArgs() {
         XCTAssertEqual(ServeClient.removeArgs(name: "foo", purge: false), ["models", "rm", "foo"])
+        // Purge passes --confirmed-by-frontend: the app confirmed via its own dialog,
+        // and the CLI won't delete files from a non-TTY subprocess otherwise.
         XCTAssertEqual(ServeClient.removeArgs(name: "foo", purge: true),
-                       ["models", "rm", "foo", "--purge"])
+                       ["models", "rm", "foo", "--purge", "--confirmed-by-frontend"])
     }
 
     // MARK: - runStreaming (live stderr segments)

@@ -3,6 +3,16 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+- **Manage Models "Remove" now passes `--confirmed-by-frontend`** to `models rm
+  --purge`. image-forge v0.18.1 gates destructive deletes behind an interactive
+  "yes" and refuses from a non-TTY subprocess; the app already confirms with the
+  user in its own "Delete X and its files?" dialog, so it asserts that confirmation
+  to the CLI. Requires the bundled **image-forge v0.18.1** (older CLIs don't know
+  the flag).
+
 ## [0.6.0] - 2026-07-11
 
 ### Added

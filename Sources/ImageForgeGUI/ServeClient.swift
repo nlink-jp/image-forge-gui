@@ -207,10 +207,14 @@ final class ServeClient: @unchecked Sendable {
         return args
     }
 
-    /// Pure arg builder for `models rm` (injectable for tests).
+    /// Pure arg builder for `models rm` (injectable for tests). When purging, the
+    /// app has already confirmed the deletion with the user via its own dialog, so
+    /// it passes `--confirmed-by-frontend`: the CLI otherwise requires a "yes" at an
+    /// interactive terminal (which this non-TTY subprocess can't provide) before it
+    /// will delete weight files.
     static func removeArgs(name: String, purge: Bool) -> [String] {
         var args = ["models", "rm", name]
-        if purge { args.append("--purge") }
+        if purge { args += ["--purge", "--confirmed-by-frontend"] }
         return args
     }
 
