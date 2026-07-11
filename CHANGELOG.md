@@ -3,7 +3,7 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [0.5.2] - unreleased
+## [0.5.2] - 2026-07-11
 
 ### Fixed
 - **`runOneShot` no longer risks a deadlock on large upscales** (#1). It drained
