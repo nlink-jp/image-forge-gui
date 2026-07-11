@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   display label only — the folder on disk is never renamed or moved. The Default
   library can be renamed too and keeps its protected first position.
 
+### Changed
+- The batch **Count** control is now a slider (1–16) instead of a stepper — easier
+  to read and set at a glance. Same 1–16 range and behavior.
+
 ## [0.6.2] - 2026-07-11
 
 ### Changed

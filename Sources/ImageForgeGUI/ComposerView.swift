@@ -181,7 +181,16 @@ struct ComposerView: View {
                 Picker("Hires", selection: $hires) {
                     ForEach(HiresMode.allCases) { Text($0.rawValue).tag($0) }
                 }
-                Stepper("Count: \(count)", value: $count, in: 1...16)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Count: \(count)")
+                    Slider(
+                        value: Binding(
+                            get: { Double(count) },
+                            set: { count = Int($0.rounded()) }),
+                        in: 1...16, step: 1,
+                        minimumValueLabel: Text("1"), maximumValueLabel: Text("16")
+                    ) { Text("Count") }
+                }
             }
 
             Section("Advanced") {
