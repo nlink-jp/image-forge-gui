@@ -3,6 +3,18 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- **In-app model management** (#3, ADR-0001). A fresh install no longer dead-ends
+  into the terminal: a dedicated **Manage Models** window (View → Manage Models…,
+  ⌘⇧M, or the "Get your first model…" button that replaces the Composer's empty
+  picker) browses the curated catalog (`models list --catalog --json`), **installs**
+  a model with a live download progress bar (`models pull`, its stderr progress
+  streamed via a new `runStreaming` one-shot), and **removes** an installed model to
+  reclaim its files (`models rm --purge`). Rated (questionable / explicit) models
+  require a confirmation before install. `quantize` / `import` / `gc` stay in the CLI.
+
 ## [0.5.2] - 2026-07-11
 
 ### Fixed

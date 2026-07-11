@@ -36,6 +36,11 @@ macOS 14+（Apple silicon）。
   **Copy Negative Prompt**、**Reveal in Finder** が使えます。ヘッダー行の**ライブラリ切替**
   （フォルダメニュー）で名前付きライブラリを切り替え、新規追加（任意のフォルダ）、
   Finder 表示、一覧からの削除ができます。
+- **モデル管理**（View → Manage Models…、⌘⇧M。またはモデル未導入時にピッカーの代わりに
+  出る「Get your first model…」ボタン）: 厳選**カタログ**（アーキ・コンテンツレーティング・
+  ライセンス・推奨RAM）を閲覧し、ダウンロード進捗バー付きでモデルを**インストール**、または
+  導入済みモデルを**削除**して数GBのファイルを回収できる。初回のユーザーがターミナルに触れずに
+  始められる。questionable／explicit のモデルはインストール前に確認を求める。
 - **ステータスバー**: エンジンの `ready` / `load` / `progress` / `done` / `error`
   イベントで駆動されるライブ進捗バーとメッセージ。エラーはインライン表示。
 
@@ -54,8 +59,11 @@ macOS 14+（Apple silicon）。
 アプリは **`image-forge serve`** を一度だけ spawn して常駐させます（モデルロードと
 Metal 初期化を毎回ではなく一度だけ支払う）。1 生成＝ stdin に 1 行の JSON 要求、
 エンジンは stdout に JSON イベントを流し返し、アプリはそれを 1 行ずつデコードして
-進捗更新と完成画像の追加を行います。モデル一覧は単発の
-`image-forge models list --json` から取得します。
+進捗更新と完成画像の追加を行います。モデル管理も同じ単発パターンで、`models list --json`
+（導入済み）と `models list --catalog --json`（カタログ）がピッカーと Manage Models
+ウィンドウを埋め、インストールは `models pull`（stderr のダウンロード進捗をライブで進捗バーに
+流す）、削除は `models rm --purge` を実行します。拡散エンジン・カタログ・レジストリは
+エンジン側が保持し、アプリは CLI 利用者と同じサブコマンドを駆動するだけです。
 
 `claude-usage-lens-gui` / `quick-translate` と同じ構図です（Go CLI が実処理を持ち、
 Swift は薄いフロントエンド）。
@@ -88,11 +96,13 @@ make test
 動作する txt2img **＋ img2img** アプリ。Composer（単発＋バッチ、中止、Advanced 上書き、
 初期画像、LoRA 重ねがけ、ControlNet、License/クレジット欄）→ Gallery（ライトボックス、
 プロンプト／全パラメータ再利用、use-as-init、ESRGAN アップスケール、切替可能なライブラリ）
-をライブ進捗つきで提供。再利用は現在のセッションでも、ライブラリフォルダから読み込んだ
+をライブ進捗つきで提供。さらにアプリ内**モデル管理**（カタログ閲覧・進捗つきインストール・
+削除 — ADR-0001）。再利用は現在のセッションでも、ライブラリフォルダから読み込んだ
 画像（埋め込みメタデータから復元）でも動作します。
 
-**CLI 側のまま:** inpaint とモデル管理（本アプリは LoRA + ControlNet 付きの txt2img／
-img2img 用 `serve` エンジンと、単発の `upscale` を駆動します）。
+**CLI 側のまま:** inpaint と、使用頻度の低いモデル操作（`quantize` / `import` / `gc`）。
+本アプリは LoRA + ControlNet 付きの txt2img／img2img 用 `serve` エンジン、単発の
+`upscale`、カタログのインストール／削除を駆動します。
 
 ## なぜ Swift（ネイティブ macOS）
 

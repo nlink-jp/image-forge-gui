@@ -22,21 +22,27 @@ make test       # swift test
 
 ```
 Sources/ImageForgeGUI/
-  App.swift            @main; WindowGroup { ContentView } + AppCommands (menu bar)
-  ContentView.swift    HSplitView: Composer | Gallery, + bottom StatusBar
+  App.swift            @main; WindowGroup { ContentView } + a second Window
+                       ("manage-models") { ManageModelsView } + AppCommands (menu bar)
+  ContentView.swift    HSplitView: Composer | Gallery, + bottom StatusBar;
+                       onChange(manageModelsTick) → openWindow("manage-models")
   ComposerView.swift   prompt/negative/model/LoRA/init-image/ControlNet/params/advanced/License/count/hires + Generate
+                       (empty-state "Get your first model…" → requestManageModels)
   GalleryView.swift    library switcher header + LazyVGrid thumbnails +
                        selection InspectorBar + context menu + lightbox
+  ManageModelsView.swift  Manage Models window (ADR-0001): Installed (Remove→rm --purge)
+                       + Available (Install→pull, live progress, NSFW opt-in confirm)
   AppModel.swift       @MainActor ObservableObject: ServeClient owner, models,
-                       results, progress, LibraryStore owner; generate();
-                       loadActiveLibrary / switch/add/removeLibrary; menu actions
-  ServeClient.swift    resident `serve` driver + pure LineBuffer + one-shot listModels()
+                       catalog + installs (model mgmt), results, progress, LibraryStore
+                       owner; generate(); load/install/removeModel; menu actions
+  ServeClient.swift    resident `serve` driver + pure LineBuffer/ProgressBuffer;
+                       one-shots: listModels / listCatalog / pull(runStreaming) / remove / upscale
   BinaryResolver.swift pure, tested binary resolution
   LibraryStore.swift   pure, tested: named libraries + active id, JSON-persisted
   PngMetadata.swift    pure, tested: PNG tEXt/iTXt chunk parser (recover prompt/seed)
-  Models.swift         GenerationRequest / ServeEvent / ModelInfo / GeneratedImage
+  Models.swift         GenerationRequest / ServeEvent / ModelInfo / CatalogEntry / GeneratedImage
 Tests/ImageForgeGUITests/
-  GenerationRequestTests / ServeEventTests (+ LineBufferTests) /
+  GenerationRequestTests / ServeEventTests (+ LineBufferTests) / ManageModelsTests /
   ModelInfoTests / BinaryResolverTests / PngMetadataTests / LibraryStoreTests
 Info.plist             normal app (NO LSUIElement); graphics-design category
 scripts/               codesign-darwin-app.sh, notarize-darwin-app.sh, make-icns.sh
@@ -60,6 +66,15 @@ assets/                AppIcon-1024.png (→ AppIcon.icns at build)
   Resources first (signed/notarized trust anchor), then `$IMAGE_FORGE_BIN`,
   `~/bin/image-forge`, then each `$PATH` dir. `make build-app` bundles the CLI so
   the `.app` is self-contained.
+- **Model management (ADR-0001)** drives one-shot subcommands, not `serve`:
+  `models list --catalog --json` (→ `CatalogEntry`), `models pull` (install),
+  `models rm --purge` (remove). `pull` rewrites its percentage with `\r` (`\r 62%`)
+  and prints status with `\n`, so progress uses `ProgressBuffer` (splits on **both**
+  `\n` and `\r`, pure/tested) via `runStreaming` (delivers stderr segments live),
+  not `LineBuffer`. `AppModel.parseProgress` turns a bare `"62%"` segment into a
+  fraction. The Manage Models window is opened via the `manageModelsTick`
+  → `openWindow("manage-models")` pattern (Commands can't call `openWindow`
+  directly; ContentView observes the tick), mirroring `newGenerationTick`.
 - **Seed batching.** Random-seed batches send `seed = -1` per image (the engine
   randomizes and reports the seed back on `done`); a fixed seed increments per
   image. Each request gets a unique `output` path under

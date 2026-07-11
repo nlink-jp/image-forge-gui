@@ -19,6 +19,30 @@ struct LineBuffer {
     }
 }
 
+/// Splits a byte stream into progress "segments" on either newline or carriage
+/// return — `image-forge models pull` rewrites its percentage in place with `\r`
+/// (`\r  62%`) and prints status lines with `\n`. Pure and synchronous so it can
+/// be unit-tested; a trailing partial segment is retained for the next chunk.
+struct ProgressBuffer {
+    private var buffer = Data()
+
+    /// Append a chunk and return each completed, non-empty, whitespace-trimmed
+    /// segment (a `\r`-updated percentage or a `\n` status line).
+    mutating func append(_ data: Data) -> [String] {
+        buffer.append(data)
+        var out: [String] = []
+        while let idx = buffer.firstIndex(where: { $0 == 0x0A || $0 == 0x0D }) {
+            let seg = Data(buffer[buffer.startIndex..<idx])
+            buffer.removeSubrange(buffer.startIndex...idx)
+            if let s = String(data: seg, encoding: .utf8) {
+                let t = s.trimmingCharacters(in: .whitespaces)
+                if !t.isEmpty { out.append(t) }
+            }
+        }
+        return out
+    }
+}
+
 /// Drives a resident `image-forge serve` process: one JSON request per line on
 /// stdin, a stream of JSON events on stdout. The process is kept alive so the
 /// model load + Metal init is paid once, not per generation.
@@ -151,6 +175,45 @@ final class ServeClient: @unchecked Sendable {
         return try ModelInfo.decodeInstalled(from: data)
     }
 
+    /// One-shot: `image-forge models list --catalog --json` → the curated catalog.
+    func listCatalog() async throws -> [CatalogEntry] {
+        let data = try await Self.runOneShot(
+            binary: binary, args: ["models", "list", "--catalog", "--json"])
+        return try CatalogEntry.decodeCatalog(from: data)
+    }
+
+    /// Install a catalog model: `image-forge models pull <name> [--allow-nsfw]`,
+    /// surfacing download progress live via `onProgress` (each stderr segment — a
+    /// `\r`-updated percentage or a status line). Throws `.runFailed` on failure.
+    func pull(name: String, allowNSFW: Bool,
+              onProgress: @escaping @Sendable (String) -> Void) async throws {
+        _ = try await Self.runStreaming(
+            binary: binary,
+            args: Self.pullArgs(name: name, allowNSFW: allowNSFW),
+            onLine: onProgress)
+    }
+
+    /// Remove an installed model: `image-forge models rm <name> [--purge]`. With
+    /// `purge` the weight files are deleted too (shared / out-of-dir files kept).
+    func remove(name: String, purge: Bool) async throws {
+        _ = try await Self.runOneShot(
+            binary: binary, args: Self.removeArgs(name: name, purge: purge))
+    }
+
+    /// Pure arg builder for `models pull` (injectable for tests).
+    static func pullArgs(name: String, allowNSFW: Bool) -> [String] {
+        var args = ["models", "pull", name]
+        if allowNSFW { args.append("--allow-nsfw") }
+        return args
+    }
+
+    /// Pure arg builder for `models rm` (injectable for tests).
+    static func removeArgs(name: String, purge: Bool) -> [String] {
+        var args = ["models", "rm", name]
+        if purge { args.append("--purge") }
+        return args
+    }
+
     /// One-shot: `image-forge upscale <input> -o <output> [--model <name>]`, run
     /// as a separate short-lived process (not the resident engine). The output
     /// factor is the ESRGAN model's native one (typically ×4) — image-forge
@@ -212,5 +275,76 @@ final class ServeClient: @unchecked Sendable {
                 cont.resume(returning: data)
             }
         }
+    }
+
+    /// Like `runOneShot`, but delivers each stderr *segment* to `onLine` as it
+    /// arrives — used by `pull` to show live download progress (`\r`-updated
+    /// percentages + status lines). stdout is returned at exit; a nonzero exit
+    /// throws `.runFailed` with the tail of stderr.
+    static func runStreaming(
+        binary: URL, args: [String], onLine: @escaping @Sendable (String) -> Void
+    ) async throws -> Data {
+        try await withCheckedThrowingContinuation { cont in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let proc = Process()
+                proc.executableURL = binary
+                proc.arguments = args
+                let out = Pipe()
+                let err = Pipe()
+                proc.standardOutput = out
+                proc.standardError = err
+
+                // stderr → live progress segments (buffered by \n or \r). A
+                // lock-guarded collector keeps the last few segments for error text.
+                let collector = StreamCollector()
+                err.fileHandleForReading.readabilityHandler = { h in
+                    let d = h.availableData
+                    if d.isEmpty { return }
+                    for seg in collector.ingest(d) { onLine(seg) }
+                }
+                do {
+                    try proc.run()
+                } catch {
+                    err.fileHandleForReading.readabilityHandler = nil
+                    cont.resume(throwing: ServeError.launchFailed(error.localizedDescription))
+                    return
+                }
+                let data = out.fileHandleForReading.readDataToEndOfFile()
+                proc.waitUntilExit()
+                err.fileHandleForReading.readabilityHandler = nil
+                // Flush any stderr left in the pipe after exit (the final status /
+                // error line the live handler may not have seen).
+                let rest = err.fileHandleForReading.readDataToEndOfFile()
+                if !rest.isEmpty { for seg in collector.ingest(rest) { onLine(seg) } }
+                if proc.terminationStatus != 0 {
+                    cont.resume(throwing: ServeError.runFailed(collector.tail()))
+                    return
+                }
+                cont.resume(returning: data)
+            }
+        }
+    }
+}
+
+/// Lock-guarded accumulator for `runStreaming`'s stderr: splits bytes into
+/// progress segments and retains the last few for error reporting. `@unchecked
+/// Sendable` because all mutable state is guarded by the lock.
+private final class StreamCollector: @unchecked Sendable {
+    private var buffer = ProgressBuffer()
+    private var recent: [String] = []
+    private let lock = NSLock()
+
+    func ingest(_ data: Data) -> [String] {
+        lock.lock(); defer { lock.unlock() }
+        let segs = buffer.append(data)
+        recent.append(contentsOf: segs)
+        if recent.count > 12 { recent.removeFirst(recent.count - 12) }
+        return segs
+    }
+
+    /// The last few segments, joined — used as the error message on nonzero exit.
+    func tail() -> String {
+        lock.lock(); defer { lock.unlock() }
+        return recent.suffix(4).joined(separator: "\n")
     }
 }

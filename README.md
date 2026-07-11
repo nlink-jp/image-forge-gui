@@ -39,6 +39,13 @@ macOS 14+ (Apple silicon).
   Prompt**, and **Reveal in Finder**. A
   **library switcher** (folder menu) in the header row switches between named
   libraries, adds a new one (any folder), reveals it, or removes it from the list.
+- **Manage Models** (View → Manage Models…, ⌘⇧M — or the "Get your first model…"
+  button that replaces the model picker on a fresh install): browse the curated
+  **catalog** (architecture, content rating, license, recommended RAM) and
+  **install** a model with a live download progress bar, or **remove** an installed
+  one to reclaim its multi-GB files. So a first-run user never has to touch the
+  terminal to get started. Rated (questionable / explicit) models ask for
+  confirmation before installing.
 - **Status bar**: a live progress bar and status message driven by the engine's
   `ready` / `load` / `progress` / `done` / `error` events; errors surface inline.
 
@@ -59,7 +66,12 @@ The app spawns **`image-forge serve`** once and keeps it resident (the model loa
 and Metal init are paid once, not per image). Each generation is a single JSON
 line written to the engine's stdin; the engine streams back JSON events on stdout,
 which the app decodes line-by-line to update progress and append finished images.
-The model list comes from a one-shot `image-forge models list --json`.
+Model management uses the same one-shot pattern: `models list --json` (installed)
+and `models list --catalog --json` (catalog) populate the pickers and the Manage
+Models window; installing runs `models pull` (its stderr download progress is
+streamed live into the progress bar) and removing runs `models rm --purge`. The
+engine still owns the diffusion, the catalog, and the registry — the app only
+drives the same subcommands a CLI user would.
 
 This mirrors the `claude-usage-lens-gui` / `quick-translate` pattern: a native
 Swift shell over a Go CLI that owns the real work.
@@ -93,11 +105,14 @@ make test
 A working txt2img **and img2img** app: Composer (single + batch, cancel, advanced
 overrides, init image, LoRA stacking, ControlNet, License/credit panel) → Gallery
 (lightbox, prompt / full-parameter reuse, use-as-init, ESRGAN upscale, switchable
-libraries) with live progress. Reuse works both for the current session and for
-images reloaded from a library folder (reconstructed from embedded metadata).
+libraries) with live progress, plus in-app **model management** (browse the
+catalog, install with progress, remove — ADR-0001). Reuse works both for the
+current session and for images reloaded from a library folder (reconstructed from
+embedded metadata).
 
-**Stays in the CLI:** inpaint and model management (this app drives the `serve`
-engine for txt2img / img2img with LoRA + ControlNet, plus one-shot `upscale`).
+**Stays in the CLI:** inpaint, and the less-common model operations
+(`quantize` / `import` / `gc`). This app drives the `serve` engine for txt2img /
+img2img with LoRA + ControlNet, one-shot `upscale`, and catalog install/remove.
 
 ## Why Swift (native macOS)
 

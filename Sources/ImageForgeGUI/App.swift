@@ -14,6 +14,14 @@ struct ImageForgeGUIApp: App {
         .windowResizability(.contentMinSize)
         .defaultSize(width: 1120, height: 740)
         .commands { AppCommands(model: model) }
+
+        // Manage Models — a dedicated window (ADR-0001), single instance, opened
+        // from the View menu or the Composer's first-run empty state.
+        Window("Manage Models", id: "manage-models") {
+            ManageModelsView()
+                .environmentObject(model)
+        }
+        .defaultSize(width: 620, height: 580)
     }
 }
 
@@ -44,8 +52,10 @@ struct AppCommands: Commands {
                 .disabled(model.selection.isEmpty)
         }
 
-        // View → Refresh Models.
+        // View → Manage Models / Refresh Models.
         CommandGroup(after: .sidebar) {
+            Button("Manage Models…") { model.requestManageModels() }
+                .keyboardShortcut("m", modifiers: [.command, .shift])
             Button("Refresh Models") { model.loadModels() }
                 .keyboardShortcut("r", modifiers: .command)
         }

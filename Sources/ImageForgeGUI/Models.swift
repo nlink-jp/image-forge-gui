@@ -149,6 +149,68 @@ struct ModelInfo: Codable, Identifiable, Equatable {
     }
 }
 
+// MARK: - Catalog entry
+
+/// One curated catalog model, as emitted by `image-forge models list --catalog
+/// --json`. Matches the `catalogView` shape in image-forge `internal/cli/models.go`.
+/// Unknown keys are ignored. Drives the Manage Models window (ADR-0001).
+struct CatalogEntry: Codable, Identifiable, Equatable {
+    var name: String
+    var arch: String
+    var kind: String?           // "" (diffusion) | upscaler | lora | controlnet
+    var rating: String?
+    var license: String?
+    var minRAMGB: Int?          // json: min_ram_gb
+    var recRAMGB: Int?          // json: rec_ram_gb
+    var multiComponent: Bool?   // json: multi_component
+    var needsOptIn: Bool?       // json: needs_opt_in — questionable/explicit rating
+    var experimental: Bool?
+    var installed: Bool?
+    var notes: String?
+    var licenseFlags: [String]? // json: license_flags
+
+    var id: String { name }
+
+    /// Whether installing this entry requires the NSFW opt-in (`--allow-nsfw`).
+    var requiresOptIn: Bool { needsOptIn ?? false }
+
+    /// Whether this entry is already installed (safe default: false).
+    var isInstalled: Bool { installed ?? false }
+
+    /// A base diffusion model (empty/absent kind) vs. an auxiliary kind.
+    var isDiffusion: Bool { (kind ?? "").isEmpty }
+
+    /// Short "kind" label for display: diffusion models show their arch; auxiliary
+    /// kinds show the kind (LoRA / ControlNet / upscaler).
+    var kindLabel: String {
+        switch kind ?? "" {
+        case "", "diffusion": return arch.uppercased()
+        case let k: return k.capitalized
+        }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case name, arch, kind, rating, license
+        case minRAMGB = "min_ram_gb"
+        case recRAMGB = "rec_ram_gb"
+        case multiComponent = "multi_component"
+        case needsOptIn = "needs_opt_in"
+        case experimental, installed, notes
+        case licenseFlags = "license_flags"
+    }
+
+    /// Decode the catalog array from `image-forge models list --catalog --json`
+    /// (a bare JSON array), tolerating the `--all` wrapper shape as a fallback.
+    static func decodeCatalog(from data: Data) throws -> [CatalogEntry] {
+        let dec = JSONDecoder()
+        if let arr = try? dec.decode([CatalogEntry].self, from: data) {
+            return arr
+        }
+        struct Wrapper: Decodable { let catalog: [CatalogEntry]? }
+        return (try dec.decode(Wrapper.self, from: data)).catalog ?? []
+    }
+}
+
 // MARK: - Gallery item
 
 /// A generated image in the session gallery: the PNG on disk plus the request

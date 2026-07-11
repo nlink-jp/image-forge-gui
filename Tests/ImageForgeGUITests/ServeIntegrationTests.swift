@@ -48,4 +48,27 @@ final class ServeIntegrationTests: XCTestCase {
             FileManager.default.fileExists(atPath: out),
             "engine reported done but the PNG is missing at \(out)")
     }
+
+    /// Real end-to-end for the Manage Models window (ADR-0001): the curated
+    /// catalog decodes from the actual `models list --catalog --json` output.
+    /// Read-only, so it only needs the binary (no model / no network).
+    func testListCatalogDecodesFromRealBinary() async throws {
+        try XCTSkipUnless(
+            ProcessInfo.processInfo.environment["IMAGE_FORGE_GUI_E2E"] != nil,
+            "set IMAGE_FORGE_GUI_E2E=1 (and $IMAGE_FORGE_BIN or ~/bin/image-forge) to run")
+        let client = try ServeClient()
+        let catalog = try await client.listCatalog()
+        XCTAssertFalse(catalog.isEmpty, "catalog should not be empty")
+        // Every entry has a name; base diffusion models also carry an arch
+        // (auxiliary kinds like upscalers legitimately have an empty arch).
+        for e in catalog {
+            XCTAssertFalse(e.name.isEmpty, "catalog entry with no name")
+            if e.isDiffusion {
+                XCTAssertFalse(e.arch.isEmpty, "diffusion model \(e.name) has no arch")
+            }
+        }
+        // The classic smoke-test model is always in the catalog.
+        XCTAssertTrue(catalog.contains { $0.name == "sd15-emaonly" },
+                      "expected sd15-emaonly in the catalog")
+    }
 }

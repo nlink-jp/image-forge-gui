@@ -133,6 +133,19 @@ struct ComposerView: View {
                 }
                 .disabled(diffusionModels.isEmpty)
                 Toggle("Safe only (hide questionable / explicit)", isOn: $safeOnly)
+
+                // First-run onboarding: with no model installed, the picker is a
+                // dead end — offer an in-app way to get one (ADR-0001) instead of
+                // sending the user to the terminal.
+                if diffusionModels.isEmpty {
+                    Button {
+                        model.requestManageModels()
+                    } label: {
+                        Label(model.models.isEmpty ? "Get your first model…" : "Manage Models…",
+                              systemImage: "arrow.down.circle")
+                    }
+                    .help("Browse the catalog and install a model")
+                }
             }
 
             Section("LoRA") {
@@ -264,10 +277,11 @@ struct ComposerView: View {
                      : "No LoRAs installed for \(selectedArch.uppercased()).")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                Text("Install one with:  image-forge models pull lcm-lora-sdxl")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                    .textSelection(.enabled)
+                if selectedModel != nil {
+                    Button("Get LoRAs in Manage Models…") { model.requestManageModels() }
+                        .buttonStyle(.link)
+                        .font(.caption2)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         } else {

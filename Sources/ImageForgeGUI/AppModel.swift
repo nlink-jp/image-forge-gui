@@ -12,6 +12,22 @@ final class AppModel: ObservableObject {
     // Model list (Composer picker).
     @Published var models: [ModelInfo] = []
 
+    // Manage Models window (ADR-0001): the curated catalog, in-flight installs, and
+    // a tick the main window observes to open the window (menu / empty-state button).
+    @Published var catalog: [CatalogEntry] = []
+    @Published var catalogLoading = false
+    @Published var catalogError: String?
+    /// Installs in flight, keyed by model name (present == installing). Drives the
+    /// per-row progress in the Manage Models window.
+    @Published var installs: [String: InstallState] = [:]
+    @Published var manageModelsTick = 0
+
+    /// One in-flight `models pull`: an optional 0…1 fraction and a status line.
+    struct InstallState: Equatable {
+        var fraction: Double?
+        var status: String
+    }
+
     // Session gallery (newest first) + selection (shared so File-menu commands and
     // the gallery batch actions can act on the selection). Multi-select: plain
     // click replaces, ⌘-click toggles, ⇧-click extends a range from the anchor.
@@ -340,6 +356,94 @@ final class AppModel: ObservableObject {
                 self.errorMessage = "Couldn't list models: \(error.localizedDescription)"
             }
         }
+    }
+
+    // MARK: - Model management (ADR-0001)
+
+    /// Ask the main window to open the Manage Models window (menu / empty state).
+    func requestManageModels() { manageModelsTick += 1 }
+
+    /// Load the curated catalog for the Manage Models window.
+    func loadCatalog() {
+        catalogLoading = true
+        catalogError = nil
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { self.catalogLoading = false }
+            do {
+                let client = try self.client ?? ServeClient()
+                self.catalog = try await client.listCatalog()
+            } catch {
+                self.catalogError = error.localizedDescription
+            }
+        }
+    }
+
+    /// Install a catalog model with `models pull`, streaming progress into
+    /// `installs[name]`. On success, refreshes the installed list + catalog
+    /// (installed badges). `allowNSFW` must be caller-confirmed for opt-in entries.
+    func install(_ entry: CatalogEntry, allowNSFW: Bool) {
+        let name = entry.name
+        guard installs[name] == nil else { return } // already installing
+        installs[name] = InstallState(fraction: nil, status: "Starting…")
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                let client = try self.client ?? ServeClient()
+                try await client.pull(name: name, allowNSFW: allowNSFW) { segment in
+                    // Called on a background queue; hop to the main actor.
+                    let parsed = AppModel.parseProgress(segment)
+                    Task { @MainActor [weak self] in
+                        self?.applyInstallProgress(name: name, parsed: parsed)
+                    }
+                }
+                self.installs[name] = nil
+                self.statusMessage = "Installed \(name)"
+                self.loadModels()
+                self.loadCatalog()
+            } catch {
+                self.installs[name] = nil
+                self.errorMessage = "Couldn't install \(name): \(error.localizedDescription)"
+            }
+        }
+    }
+
+    /// Apply one parsed progress segment to an in-flight install.
+    private func applyInstallProgress(name: String, parsed: (fraction: Double?, status: String?)) {
+        guard var st = installs[name] else { return }
+        if let f = parsed.fraction { st.fraction = f }
+        if let s = parsed.status { st.status = s }
+        installs[name] = st
+    }
+
+    /// Remove an installed model and reclaim its files (`models rm --purge`), then
+    /// refresh the installed list + catalog.
+    func removeModel(_ name: String) {
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            do {
+                let client = try self.client ?? ServeClient()
+                try await client.remove(name: name, purge: true)
+                self.statusMessage = "Removed \(name)"
+                self.loadModels()
+                self.loadCatalog()
+            } catch {
+                self.errorMessage = "Couldn't remove \(name): \(error.localizedDescription)"
+            }
+        }
+    }
+
+    /// Parse one `models pull` stderr segment into a progress fraction and/or a
+    /// status line. `"62%"` (any leading spaces) → fraction 0.62; other text →
+    /// status. Pure and nonisolated for unit testing.
+    nonisolated static func parseProgress(_ segment: String) -> (fraction: Double?, status: String?) {
+        let t = segment.trimmingCharacters(in: .whitespaces)
+        if t.isEmpty { return (nil, nil) }
+        if let r = t.range(of: #"^\d{1,3}%$"#, options: .regularExpression) {
+            let digits = t[r].dropLast()
+            if let v = Double(digits) { return (min(max(v / 100, 0), 1), nil) }
+        }
+        return (nil, t)
     }
 
     // MARK: - Generation

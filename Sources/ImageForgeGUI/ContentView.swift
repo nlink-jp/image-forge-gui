@@ -4,6 +4,7 @@ import SwiftUI
 /// with live progress along the bottom.
 struct ContentView: View {
     @EnvironmentObject var model: AppModel
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(spacing: 0) {
@@ -16,6 +17,9 @@ struct ContentView: View {
             Divider()
             StatusBar()
         }
+        // Open the Manage Models window when requested from a menu / empty state
+        // (the tick pattern mirrors newGenerationTick / reuseTick).
+        .onChange(of: model.manageModelsTick) { openWindow(id: "manage-models") }
     }
 }
 
