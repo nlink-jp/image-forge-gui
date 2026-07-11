@@ -67,6 +67,40 @@ final class LibraryStoreTests: XCTestCase {
         XCTAssertEqual(final.libraries[0].name, "Default")
     }
 
+    /// Rename changes only the label (not id/path), persists, and survives reload.
+    func testRenamePersistsAndKeepsIdentity() {
+        let id: Library.ID
+        let path: String
+        do {
+            let store = makeStore()
+            let a = store.add(name: "Project A", url: tmpDir.appendingPathComponent("proj-a"))
+            id = a.id
+            path = a.path
+            XCTAssertTrue(store.rename(a.id, to: "  Renamed  "))
+            let r = store.libraries.first { $0.id == a.id }!
+            XCTAssertEqual(r.name, "Renamed", "name is trimmed")
+            XCTAssertEqual(r.id, id, "id is unchanged")
+            XCTAssertEqual(r.path, path, "folder path is untouched")
+        }
+        // Persisted across reload.
+        let reloaded = makeStore()
+        XCTAssertEqual(reloaded.libraries.first { $0.id == id }?.name, "Renamed")
+    }
+
+    /// A blank rename is rejected and leaves the name unchanged. Renaming the
+    /// Default is allowed (it keeps its protected first position).
+    func testRenameRejectsBlankAndAllowsDefault() {
+        let store = makeStore()
+        let defID = store.libraries[0].id
+        XCTAssertFalse(store.rename(defID, to: "   "))
+        XCTAssertEqual(store.libraries[0].name, "Default", "blank rename is a no-op")
+        XCTAssertFalse(store.rename(UUID(), to: "x"), "unknown id is rejected")
+
+        XCTAssertTrue(store.rename(defID, to: "My Library"))
+        XCTAssertEqual(store.libraries[0].name, "My Library")
+        XCTAssertFalse(store.canRemove(defID), "renamed Default is still the protected Default")
+    }
+
     /// The Default / last library can never be removed.
     func testCannotRemoveDefaultOrLast() {
         let store = makeStore()

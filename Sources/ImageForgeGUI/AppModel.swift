@@ -599,6 +599,13 @@ final class AppModel: ObservableObject {
         loadActiveLibrary()
     }
 
+    /// Rename a library's display label (the folder on disk is untouched). No-op on
+    /// a blank name or unknown id.
+    func renameLibrary(_ id: Library.ID, to newName: String) {
+        guard libraryStore.rename(id, to: newName) else { return }
+        syncLibraries()
+    }
+
     /// Remove a library from the list (Default/last are protected). If it was
     /// active, the Default becomes active and is loaded.
     func removeLibrary(_ id: Library.ID) {

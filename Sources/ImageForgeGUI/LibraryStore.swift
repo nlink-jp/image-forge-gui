@@ -79,6 +79,20 @@ final class LibraryStore {
         return true
     }
 
+    /// Rename a library's display label. Trims whitespace; a blank name is rejected
+    /// (returns false). Only the label changes — the folder on disk and the id are
+    /// untouched, so a renamed Default stays the (first, protected) Default.
+    @discardableResult
+    func rename(_ id: Library.ID, to newName: String) -> Bool {
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let idx = libraries.firstIndex(where: { $0.id == id }) else {
+            return false
+        }
+        libraries[idx].name = trimmed
+        persist()
+        return true
+    }
+
     /// Make `id` the active library (no-op for an unknown id).
     func setActive(_ id: Library.ID) {
         guard libraries.contains(where: { $0.id == id }) else { return }

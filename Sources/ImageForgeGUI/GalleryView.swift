@@ -17,6 +17,10 @@ struct GalleryView: View {
     /// prev/next and newly-arriving generations stay consistent).
     @State private var lightboxID: GeneratedImage.ID?
 
+    /// Drives the "Rename Library" dialog; `renameText` holds the edited name.
+    @State private var renamingLibrary = false
+    @State private var renameText = ""
+
     private let columns = [GridItem(.adaptive(minimum: 180, maximum: 260), spacing: 12)]
 
     var body: some View {
@@ -109,6 +113,10 @@ struct GalleryView: View {
                 }
                 Divider()
                 Button("New Library…") { chooseNewLibrary() }
+                Button("Rename…") {
+                    renameText = model.activeLibraryName
+                    renamingLibrary = true
+                }
                 Button("Reveal in Finder") { model.revealLibrary() }
                 Button("Remove from List") { model.removeLibrary(model.activeLibraryID) }
                     .disabled(!model.canRemoveActiveLibrary)
@@ -117,6 +125,14 @@ struct GalleryView: View {
             }
             .menuStyle(.borderlessButton)
             .fixedSize()
+            .alert("Rename Library", isPresented: $renamingLibrary) {
+                TextField("Name", text: $renameText)
+                Button("Rename") { model.renameLibrary(model.activeLibraryID, to: renameText) }
+                    .disabled(renameText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Change the display name. The folder on disk is not renamed or moved.")
+            }
 
             Spacer()
 

@@ -38,7 +38,8 @@ macOS 14+ (Apple silicon).
   (ESRGAN ×4 into the current library), **Copy Prompt** / **Copy Negative
   Prompt**, and **Reveal in Finder**. A
   **library switcher** (folder menu) in the header row switches between named
-  libraries, adds a new one (any folder), reveals it, or removes it from the list.
+  libraries, adds a new one (any folder), renames the active one (label only — the
+  folder on disk is untouched), reveals it, or removes it from the list.
 - **Manage Models** (View → Manage Models…, ⌘⇧M — or the "Get your first model…"
   button that replaces the model picker on a fresh install): browse the curated
   **catalog** (architecture, content rating, license, recommended RAM) and

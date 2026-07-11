@@ -35,6 +35,7 @@ macOS 14+（Apple silicon）。
   **Upscale…**（ESRGAN ×4 で現在のライブラリに出力）、**Copy Prompt** ／
   **Copy Negative Prompt**、**Reveal in Finder** が使えます。ヘッダー行の**ライブラリ切替**
   （フォルダメニュー）で名前付きライブラリを切り替え、新規追加（任意のフォルダ）、
+  アクティブなライブラリの改名（表示名のみ。ディスク上のフォルダは変更しない）、
   Finder 表示、一覧からの削除ができます。
 - **モデル管理**（View → Manage Models…、⌘⇧M。またはモデル未導入時にピッカーの代わりに
   出る「Get your first model…」ボタン）: 厳選**カタログ**（アーキ・コンテンツレーティング・
