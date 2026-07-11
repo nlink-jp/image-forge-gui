@@ -412,6 +412,7 @@ struct ComposerView: View {
         case "no-derivatives": return "No derivatives"
         case "attribution": return "Attribution"
         case "share-alike": return "Share-alike"
+        case "review-license": return "Review license"
         default: return f
         }
     }
