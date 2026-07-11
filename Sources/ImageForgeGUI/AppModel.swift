@@ -79,6 +79,47 @@ final class AppModel: ObservableObject {
         return models.first { $0.name == name }?.arch ?? ""
     }
 
+    /// Trigger words (if any) for an installed LoRA, by registry name.
+    func triggerWords(forLoRA name: String) -> [String] {
+        models.first { $0.name == name }?.triggerWords ?? []
+    }
+
+    /// The de-duplicated trigger words across the given LoRAs, in order. These are
+    /// kept *out* of the prompt and merged only at generation (so removing a LoRA
+    /// drops its triggers and the prompt field stays what the user typed). Pure.
+    nonisolated static func combinedTriggerWords(
+        forLoRAs names: [String], models: [ModelInfo]
+    ) -> [String] {
+        var seen = Set<String>()
+        var out: [String] = []
+        for name in names {
+            let tw = models.first { $0.name == name }?.triggerWords ?? []
+            for t in tw where !t.isEmpty && seen.insert(t.lowercased()).inserted {
+                out.append(t)
+            }
+        }
+        return out
+    }
+
+    /// Which of `triggers` are not already present in `prompt` (case-insensitive).
+    /// A LoRA whose trigger is missing loads but does nothing — this drives the
+    /// Composer's "insert" affordance.
+    nonisolated static func missingTriggers(in prompt: String, triggers: [String]) -> [String] {
+        let p = prompt.lowercased()
+        return triggers.filter { !$0.isEmpty && !p.contains($0.lowercased()) }
+    }
+
+    /// `prompt` with any missing `triggers` prepended (activation tokens usually
+    /// work best near the front). No-op when they're all already present. Pure.
+    nonisolated static func prompt(_ prompt: String, insertingTriggers triggers: [String]) -> String {
+        let missing = missingTriggers(in: prompt, triggers: triggers)
+        guard !missing.isEmpty else { return prompt }
+        let joined = missing.joined(separator: ", ")
+        return prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? joined
+            : joined + ", " + prompt
+    }
+
     /// Build serve's `loras` payload — one `"<path>:<weight>"` per selection.
     /// Selections naming an unknown model, a non-LoRA, or a model with no path
     /// are skipped. Pure, so the Composer's payload is unit-testable.

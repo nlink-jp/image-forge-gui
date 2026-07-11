@@ -80,6 +80,9 @@ struct ModelInfo: Codable, Identifiable, Equatable {
     var path: String?
     var kind: String?       // "" (diffusion) or "upscaler"
     var inCatalog: Bool?    // json: in_catalog
+    /// Prompt tokens that activate a LoRA (json: trigger_words). Absent → nil.
+    /// Without them a LoRA loads but does nothing, so the Composer surfaces them.
+    var triggerWords: [String]?
 
     var id: String { name }
 
@@ -101,6 +104,7 @@ struct ModelInfo: Codable, Identifiable, Equatable {
     enum CodingKeys: String, CodingKey {
         case name, arch, rating, license, path, kind
         case inCatalog = "in_catalog"
+        case triggerWords = "trigger_words"
     }
 
     /// Decode the installed-model array from `image-forge models list --json`.

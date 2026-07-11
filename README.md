@@ -13,7 +13,8 @@ macOS 14+ (Apple silicon).
   showing each model's architecture and catalog content rating with a **Safe
   only** toggle (hide questionable / explicit), a **LoRA** section (stack
   installed LoRAs with per-LoRA weight sliders; only architecture-compatible ones
-  are offered), an **Init image** section for
+  are offered; **trigger words are shown and auto-inserted into the prompt**), an
+  **Init image** section for
   **img2img** (drop or choose an image + a **strength** slider), core parameters
   (seed with a random toggle, steps, CFG, width/height, hires), an **Advanced**
   section (sampler / scheduler / clip-skip overrides), and a batch **count**.

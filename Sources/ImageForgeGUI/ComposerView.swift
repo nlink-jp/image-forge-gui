@@ -65,6 +65,9 @@ struct ComposerView: View {
     @State private var loraRows: [LoRARow] = []
     /// Hide questionable/explicit models from the picker when on.
     @AppStorage("safeOnly") private var safeOnly = false
+    /// Merge the selected LoRAs' trigger words into the prompt at generation time
+    /// (kept out of the prompt field to avoid clutter/accumulation).
+    @AppStorage("autoAddTriggers") private var autoAddTriggers = true
 
     @FocusState private var promptFocused: Bool
 
@@ -271,6 +274,12 @@ struct ComposerView: View {
                             .foregroundStyle(.secondary)
                             .frame(width: 34, alignment: .trailing)
                     }
+                    let triggers = model.triggerWords(forLoRA: row.name)
+                    if !triggers.isEmpty {
+                        Text("trigger: \(triggers.joined(separator: ", "))")
+                            .font(.caption2).foregroundStyle(.tertiary)
+                            .lineLimit(1).truncationMode(.tail)
+                    }
                 }
             }
             Button { addLoRA() } label: {
@@ -278,7 +287,56 @@ struct ComposerView: View {
             }
             .buttonStyle(.bordered)
             .disabled(unusedLoRAs.isEmpty)
+
+            triggerControl
         }
+    }
+
+    /// Section-level trigger handling: rather than editing the prompt when a LoRA
+    /// is picked (which piles up stale tokens), the selected LoRAs' trigger words
+    /// are shown here and merged into the prompt only at generation — toggleable,
+    /// so the user can instead place them by hand.
+    @ViewBuilder private var triggerControl: some View {
+        if !selectedLoRATriggers.isEmpty {
+            let joined = selectedLoRATriggers.joined(separator: ", ")
+            Divider()
+            Toggle("Add trigger words automatically", isOn: $autoAddTriggers)
+                .font(.callout)
+            // A read-only, selectable box holding just the trigger words, plus a
+            // one-click Copy — so they're easy to paste in when auto-add is off.
+            HStack(spacing: 6) {
+                Text(joined)
+                    .font(.caption.monospaced())
+                    .textSelection(.enabled)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 6).padding(.vertical, 4)
+                    .background(RoundedRectangle(cornerRadius: 5).fill(Color(nsColor: .textBackgroundColor)))
+                    .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(.secondary.opacity(0.3)))
+                Button { setClipboard(joined) } label: {
+                    Image(systemName: "doc.on.doc")
+                }
+                .buttonStyle(.borderless)
+                .help("Copy trigger words")
+            }
+            Text(autoAddTriggers
+                 ? "Prepended when you Generate (words already in the prompt are skipped)."
+                 : "Not added — paste these into your prompt yourself, or the LoRA won't take effect.")
+                .font(.caption2).foregroundStyle(.tertiary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// The de-duplicated trigger words of all stacked LoRAs (not in the prompt).
+    private var selectedLoRATriggers: [String] {
+        AppModel.combinedTriggerWords(forLoRAs: loraRows.map(\.name), models: model.models)
+    }
+
+    /// The prompt actually sent: with trigger words merged in when the toggle is on.
+    private var effectivePrompt: String {
+        autoAddTriggers
+            ? AppModel.prompt(prompt, insertingTriggers: selectedLoRATriggers)
+            : prompt
     }
 
     private func addLoRA() {
@@ -401,7 +459,7 @@ struct ComposerView: View {
 
     private func generate() {
         model.generate(
-            prompt: prompt,
+            prompt: effectivePrompt,
             negative: negative.isEmpty ? nil : negative,
             model: selectedModel,
             seed: randomSeed ? nil : Int64(seedText.trimmingCharacters(in: .whitespaces)),

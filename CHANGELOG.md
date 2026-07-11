@@ -3,6 +3,22 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.0] - unreleased
+
+### Added
+- **LoRA trigger words in the Composer.** A LoRA usually only takes effect when
+  specific tokens are in the prompt — miss them and it loads and silently does
+  nothing. Each LoRA row shows its trigger words, and the section gathers the
+  selected LoRAs' triggers (de-duplicated) into one place:
+  - a **read-only, selectable box with a Copy button** holds just the trigger
+    words, so they're easy to paste in;
+  - **Add trigger words automatically** (default on) merges them into the prompt
+    **only at generation** — the prompt field is never edited, so switching or
+    removing LoRAs can't pile up stale tokens. Turn it off to place them by hand.
+- Bundles **image-forge v0.14.0** — a much larger curated LoRA catalog (few-step
+  LCM / Lightning / DMD2, plus 12 verified Civitai style LoRAs across SDXL and the
+  new **Anima** base) and the `trigger_words` this feature consumes.
+
 ## [0.3.0] - 2026-07-09
 
 ### Added
