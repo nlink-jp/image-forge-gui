@@ -21,9 +21,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   chips, and the section header gets a ⚠️ when any restricted model is selected —
   so you notice before sharing or selling the output. Driven by the CLI's
   structured `license_flags`, not by parsing license prose.
+- **Credit to include, in the License section.** When a model in use requires
+  attribution, the section shows the exact credit to give — a read-only,
+  selectable box with a one-click **Copy** — combining the base model and every
+  LoRA's attribution (de-duplicated). It matches the `credit` image-forge writes
+  into the PNG metadata, so it's a record you can also paste wherever you share
+  the image. Nothing is ever burned into the pixels.
 - Bundles **image-forge v0.15.0** — a much larger curated LoRA catalog (few-step
   LCM / Lightning / DMD2, plus 12 verified Civitai style LoRAs across SDXL and the
-  new **Anima** base), the `trigger_words`, and the `license_flags` these consume.
+  new **Anima** base), the `trigger_words`, and the `license_flags` / `attribution`
+  these consume.
 
 ## [0.3.0] - 2026-07-09
 

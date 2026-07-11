@@ -20,7 +20,9 @@ macOS 14+ (Apple silicon).
   section (sampler / scheduler / clip-skip overrides), and a batch **count**.
   A **License** section always shows the license of the base model and each LoRA
   in use, highlighting any with notable restrictions (non-commercial, no-derivatives,
-  …). Press **Generate** — it turns into **Cancel** (⌘.) while running, which stops
+  …); when a model requires attribution it also shows the **credit to include**
+  (a copyable box) — the same text image-forge records in the image metadata.
+  Press **Generate** — it turns into **Cancel** (⌘.) while running, which stops
   the batch immediately.
 - **Gallery** (main): a grid of the active library's PNGs. Click to select
   (**⌘-click** to toggle, **⇧-click** for a range); a bottom inspector shows the

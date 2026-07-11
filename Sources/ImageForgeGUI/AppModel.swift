@@ -101,6 +101,20 @@ final class AppModel: ObservableObject {
         return out
     }
 
+    /// The credit line to include when sharing the output: the attribution text of
+    /// every model in use (base model + LoRAs), de-duplicated in order and joined
+    /// with " · ". Empty when no model requires attribution. Mirrors image-forge's
+    /// `buildCredit`, which writes the same string into the PNG metadata. Pure.
+    nonisolated static func combinedCredit(forModels models: [ModelInfo]) -> String {
+        var seen = Set<String>()
+        var out: [String] = []
+        for m in models {
+            guard let c = m.creditText else { continue }
+            if seen.insert(c).inserted { out.append(c) }
+        }
+        return out.joined(separator: " · ")
+    }
+
     /// Which of `triggers` are not already present in `prompt` (case-insensitive).
     /// A LoRA whose trigger is missing loads but does nothing — this drives the
     /// Composer's "insert" affordance.

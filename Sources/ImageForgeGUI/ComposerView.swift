@@ -374,6 +374,42 @@ struct ComposerView: View {
                     .font(.caption2).foregroundStyle(.orange)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            creditControl
+        }
+    }
+
+    /// The combined credit for the models in use — the same text image-forge writes
+    /// into the PNG metadata's `credit` field. Empty when none require attribution.
+    private var combinedCredit: String {
+        AppModel.combinedCredit(forModels: modelsInUse)
+    }
+
+    /// When a model in use requires attribution, show the credit to include — a
+    /// read-only selectable box plus one-click Copy. It matches what's recorded in
+    /// the image metadata, so the user can paste it wherever they share the image.
+    @ViewBuilder private var creditControl: some View {
+        if !combinedCredit.isEmpty {
+            Divider()
+            Text("Credit to include")
+                .font(.caption.weight(.medium))
+            HStack(spacing: 6) {
+                Text(combinedCredit)
+                    .font(.caption.monospaced())
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 6).padding(.vertical, 4)
+                    .background(RoundedRectangle(cornerRadius: 5).fill(Color(nsColor: .textBackgroundColor)))
+                    .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(.secondary.opacity(0.3)))
+                Button { setClipboard(combinedCredit) } label: {
+                    Image(systemName: "doc.on.doc")
+                }
+                .buttonStyle(.borderless)
+                .help("Copy credit")
+            }
+            Text("Also written into the image metadata (never burned into the pixels).")
+                .font(.caption2).foregroundStyle(.tertiary)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 

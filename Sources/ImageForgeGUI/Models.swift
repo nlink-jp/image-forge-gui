@@ -86,11 +86,20 @@ struct ModelInfo: Codable, Identifiable, Equatable {
     /// Notable license restrictions (json: license_flags) — non-commercial /
     /// no-derivatives / attribution / share-alike. Empty/absent → permissive.
     var licenseFlags: [String]?
+    /// Credit text to give when the license requires attribution (json:
+    /// attribution). Present only for models flagged `attribution`.
+    var attribution: String?
 
     var id: String { name }
 
     /// Whether this model's license carries a notable restriction to highlight.
     var hasLicenseFlags: Bool { !(licenseFlags ?? []).isEmpty }
+
+    /// The credit line to give for this model, or nil when none is required.
+    var creditText: String? {
+        guard let a = attribution, !a.isEmpty else { return nil }
+        return a
+    }
 
     /// True for a base diffusion model (an empty/absent `kind`) — the Composer's
     /// model picker offers these only. The rest are auxiliary kinds (ADR-0006).
@@ -112,6 +121,7 @@ struct ModelInfo: Codable, Identifiable, Equatable {
         case inCatalog = "in_catalog"
         case triggerWords = "trigger_words"
         case licenseFlags = "license_flags"
+        case attribution
     }
 
     /// Decode the installed-model array from `image-forge models list --json`.
