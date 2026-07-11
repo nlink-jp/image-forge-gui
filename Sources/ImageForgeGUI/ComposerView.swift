@@ -179,6 +179,18 @@ struct ComposerView: View {
             }
 
             Section {
+                licenseControl
+            } header: {
+                HStack(spacing: 6) {
+                    Text("License")
+                    if anyLicenseFlags {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange).font(.caption)
+                    }
+                }
+            }
+
+            Section {
                 if model.isGenerating {
                     Button(role: .destructive, action: model.cancelGeneration) {
                         Label("Cancel", systemImage: "stop.fill")
@@ -330,6 +342,78 @@ struct ComposerView: View {
     /// The de-duplicated trigger words of all stacked LoRAs (not in the prompt).
     private var selectedLoRATriggers: [String] {
         AppModel.combinedTriggerWords(forLoRAs: loraRows.map(\.name), models: model.models)
+    }
+
+    // MARK: - License
+
+    /// The base model + stacked LoRAs currently in use, for the License section.
+    private var modelsInUse: [ModelInfo] {
+        var out: [ModelInfo] = []
+        if let sel = selectedModel, let m = model.models.first(where: { $0.name == sel }) {
+            out.append(m)
+        }
+        for row in loraRows {
+            if let m = model.models.first(where: { $0.name == row.name }) { out.append(m) }
+        }
+        return out
+    }
+
+    /// True when any model in use carries a notable license restriction.
+    private var anyLicenseFlags: Bool { modelsInUse.contains { $0.hasLicenseFlags } }
+
+    /// Always-on license summary: one row per model in use. Restricted models are
+    /// highlighted (orange) with flag chips; permissive ones are shown plainly.
+    @ViewBuilder private var licenseControl: some View {
+        if modelsInUse.isEmpty {
+            Text("Select a model to see its license.")
+                .font(.caption).foregroundStyle(.secondary)
+        } else {
+            ForEach(modelsInUse) { m in licenseRow(m) }
+            if anyLicenseFlags {
+                Text("You are using models with usage restrictions — check each license before sharing or selling the output.")
+                    .font(.caption2).foregroundStyle(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    @ViewBuilder private func licenseRow(_ m: ModelInfo) -> some View {
+        let flags = m.licenseFlags ?? []
+        HStack(alignment: .top, spacing: 6) {
+            Image(systemName: flags.isEmpty ? "checkmark.seal" : "exclamationmark.triangle.fill")
+                .font(.caption)
+                .foregroundStyle(flags.isEmpty ? Color.secondary : .orange)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(m.name).font(.caption.weight(.medium))
+                if !flags.isEmpty {
+                    HStack(spacing: 4) {
+                        ForEach(flags, id: \.self) { f in
+                            Text(licenseFlagLabel(f))
+                                .font(.caption2)
+                                .padding(.horizontal, 5).padding(.vertical, 1)
+                                .background(Capsule().fill(Color.orange.opacity(0.18)))
+                                .overlay(Capsule().strokeBorder(Color.orange.opacity(0.5)))
+                        }
+                    }
+                }
+                if let lic = m.license, !lic.isEmpty {
+                    Text(lic).font(.caption2).foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Spacer()
+        }
+    }
+
+    private func licenseFlagLabel(_ f: String) -> String {
+        switch f {
+        case "non-commercial": return "Non-commercial"
+        case "no-derivatives": return "No derivatives"
+        case "attribution": return "Attribution"
+        case "share-alike": return "Share-alike"
+        default: return f
+        }
     }
 
     /// The prompt actually sent: with trigger words merged in when the toggle is on.

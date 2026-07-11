@@ -15,9 +15,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - **Add trigger words automatically** (default on) merges them into the prompt
     **only at generation** — the prompt field is never edited, so switching or
     removing LoRAs can't pile up stale tokens. Turn it off to place them by hand.
-- Bundles **image-forge v0.14.0** — a much larger curated LoRA catalog (few-step
+- **License section in the Composer.** Always shows the license of the base model
+  and every LoRA in use. Models with **notable restrictions** (non-commercial,
+  no-derivatives, attribution, share-alike) are highlighted in orange with flag
+  chips, and the section header gets a ⚠️ when any restricted model is selected —
+  so you notice before sharing or selling the output. Driven by the CLI's
+  structured `license_flags`, not by parsing license prose.
+- Bundles **image-forge v0.15.0** — a much larger curated LoRA catalog (few-step
   LCM / Lightning / DMD2, plus 12 verified Civitai style LoRAs across SDXL and the
-  new **Anima** base) and the `trigger_words` this feature consumes.
+  new **Anima** base), the `trigger_words`, and the `license_flags` these consume.
 
 ## [0.3.0] - 2026-07-09
 

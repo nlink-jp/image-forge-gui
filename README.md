@@ -18,7 +18,9 @@ macOS 14+ (Apple silicon).
   **img2img** (drop or choose an image + a **strength** slider), core parameters
   (seed with a random toggle, steps, CFG, width/height, hires), an **Advanced**
   section (sampler / scheduler / clip-skip overrides), and a batch **count**.
-  Press **Generate** — it turns into **Cancel** (⌘.) while running, which stops
+  A **License** section always shows the license of the base model and each LoRA
+  in use, highlighting any with notable restrictions (non-commercial, no-derivatives,
+  …). Press **Generate** — it turns into **Cancel** (⌘.) while running, which stops
   the batch immediately.
 - **Gallery** (main): a grid of the active library's PNGs. Click to select
   (**⌘-click** to toggle, **⇧-click** for a range); a bottom inspector shows the
