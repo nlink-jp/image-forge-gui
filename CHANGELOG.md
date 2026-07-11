@@ -3,6 +3,13 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.6.2] - 2026-07-11
+
+### Changed
+- Bundles **image-forge v0.19.0**: **FLUX.1-dev** and **SD3.5-Large** are now in the
+  catalog, so they can be browsed and installed from the Manage Models window. No
+  GUI code change.
+
 ## [0.6.1] - 2026-07-11
 
 ### Changed
