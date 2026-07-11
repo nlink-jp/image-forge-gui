@@ -3,6 +3,13 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.1] - 2026-07-11
+
+### Fixed
+- Bundles **image-forge v0.15.1**, which corrects **`z-image-turbo`'s license**:
+  it is **Apache-2.0** (permissive), not the `review-license` shown in v0.4.0. The
+  License section now reflects that — no spurious restriction warning for it.
+
 ## [0.4.0] - 2026-07-11
 
 ### Added
