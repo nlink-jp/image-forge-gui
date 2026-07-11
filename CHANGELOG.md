@@ -3,6 +3,21 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.2] - unreleased
+
+### Fixed
+- **`runOneShot` no longer risks a deadlock on large upscales** (#1). It drained
+  stdout to EOF before reading stderr, so a chatty `upscale` (progress streams to
+  stderr) could fill the ~64 KiB pipe buffer and hang the app. stdout and stderr
+  are now drained concurrently.
+- **Error events no longer leak in-flight entries** (#2). A serve `error` freed a
+  `pending` slot but never removed the request from `inFlight` (it had no key). The
+  bundled serve now sends the failing request's `output`, which the GUI uses to
+  remove the exact entry; `settle()` and the engine-stopped path also reconcile
+  `inFlight` so it always tracks `pending`.
+- Bundles **image-forge v0.17.1** (batch-seed, in-flight-cancel, and
+  sampler/scheduler-validation fixes).
+
 ## [0.5.1] - 2026-07-11
 
 ### Fixed

@@ -609,6 +609,9 @@ final class AppModel: ObservableObject {
             if let out = ev.output { finishOne(outputPath: out, seed: ev.seed) }
         case .error:
             errorMessage = ev.message ?? "Generation failed."
+            // Free the exact in-flight entry — serve carries the failed request's
+            // output so it doesn't leak (an error otherwise has no key to remove by).
+            if let out = ev.output { inFlight.removeValue(forKey: out) }
             // An errored request won't emit `done`; free one slot so a batch
             // can still settle.
             pending = max(0, pending - 1)
@@ -640,6 +643,9 @@ final class AppModel: ObservableObject {
 
     private func settle() {
         isGenerating = false
+        // A settled batch has no in-flight requests; drop any orphans (e.g. an
+        // error event that carried no output) so `inFlight` tracks `pending`.
+        inFlight.removeAll()
         statusMessage = "Done — " + libraryStatus(count: results.count)
     }
 
@@ -648,6 +654,10 @@ final class AppModel: ObservableObject {
             isGenerating = false
             errorMessage = errorMessage ?? "The image-forge engine stopped unexpectedly."
         }
+        // The engine died: in-flight requests will never complete, so reset the
+        // bookkeeping rather than leave `pending`/`inFlight` stale.
+        pending = 0
+        inFlight.removeAll()
         statusMessage = "Engine stopped"
         client = nil
     }

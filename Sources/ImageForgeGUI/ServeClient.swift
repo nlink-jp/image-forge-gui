@@ -189,12 +189,23 @@ final class ServeClient: @unchecked Sendable {
                     cont.resume(throwing: ServeError.launchFailed(error.localizedDescription))
                     return
                 }
+                // Drain stderr concurrently with stdout. `upscale` streams progress
+                // to stderr throughout the run; reading stdout to EOF first would let
+                // a >64 KiB stderr stream fill the pipe buffer and block the child
+                // while we block on stdout — the classic two-pipe deadlock.
+                let group = DispatchGroup()
+                var errData = Data()
+                group.enter()
+                DispatchQueue.global(qos: .userInitiated).async {
+                    errData = err.fileHandleForReading.readDataToEndOfFile()
+                    group.leave()
+                }
                 let data = out.fileHandleForReading.readDataToEndOfFile()
                 proc.waitUntilExit()
+                group.wait() // stderr read finishes when the child closes the pipe on exit
                 if proc.terminationStatus != 0 {
-                    let stderr = String(
-                        data: err.fileHandleForReading.readDataToEndOfFile(),
-                        encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                    let stderr = String(data: errData, encoding: .utf8)?
+                        .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
                     cont.resume(throwing: ServeError.runFailed(stderr))
                     return
                 }
