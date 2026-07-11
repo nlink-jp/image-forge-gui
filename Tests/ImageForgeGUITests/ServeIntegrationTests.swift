@@ -71,4 +71,62 @@ final class ServeIntegrationTests: XCTestCase {
         XCTAssertTrue(catalog.contains { $0.name == "sd15-emaonly" },
                       "expected sd15-emaonly in the catalog")
     }
+
+    /// Real inpaint round-trip (GUI #4): generate a base image, render a painted
+    /// MaskDrawing to a same-size PNG, then send an init+mask request and confirm
+    /// the engine accepts the GUI's mask format (grayscale, white=regenerate) and
+    /// produces an output. Proves the whole GUI mask → serve → engine chain.
+    func testInpaintRoundTrip() async throws {
+        try XCTSkipUnless(
+            ProcessInfo.processInfo.environment["IMAGE_FORGE_GUI_E2E"] != nil,
+            "set IMAGE_FORGE_GUI_E2E=1 (and $IMAGE_FORGE_BIN or ~/bin/image-forge) to run")
+        let client = try ServeClient()
+        let stream = try client.start()
+        defer { client.stop() }
+
+        // A helper: send req, await its done/error (or timeout).
+        func run(_ req: GenerationRequest) async -> String {
+            do { try client.send(req) } catch { return "send-failed" }
+            return await withTaskGroup(of: String.self) { group -> String in
+                group.addTask {
+                    for await ev in stream {
+                        if ev.kind == .done, ev.output == req.output { return "done" }
+                        if ev.kind == .error { return "error:\(ev.message ?? "")" }
+                    }
+                    return "stream-ended"
+                }
+                group.addTask { try? await Task.sleep(nanoseconds: 200_000_000_000); return "timeout" }
+                let first = await group.next() ?? "none"
+                group.cancelAll()
+                return first
+            }
+        }
+
+        // 1) Base image.
+        let base = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ifgui-inpaint-base-\(UUID().uuidString).png").path
+        var b = GenerationRequest(prompt: "a small red apple on a table", output: base)
+        b.model = "sd15-emaonly"; b.steps = 6; b.seed = 5
+        let baseOutcome = await run(b)
+        XCTAssertEqual(baseOutcome, "done", "base generation failed")
+
+        // 2) Render a center-circle mask at the base image's exact pixel size.
+        let (w, h) = try XCTUnwrap(MaskCanvasView.pixelSize(of: URL(fileURLWithPath: base)))
+        var mask = MaskDrawing()
+        mask.add(MaskStamp(x: 0.5, y: 0.5, radius: 0.3, erase: false))
+        let png = try XCTUnwrap(mask.renderPNG(width: w, height: h))
+        let maskPath = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ifgui-inpaint-mask-\(UUID().uuidString).png").path
+        try png.write(to: URL(fileURLWithPath: maskPath))
+
+        // 3) Inpaint: regenerate only the masked center.
+        let out = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ifgui-inpaint-out-\(UUID().uuidString).png").path
+        var ip = GenerationRequest(prompt: "a small blue cube on a table", output: out)
+        ip.model = "sd15-emaonly"; ip.steps = 6; ip.seed = 9
+        ip.initPath = base; ip.strength = 0.8; ip.mask = maskPath
+        let outcome = await run(ip)
+        XCTAssertEqual(outcome, "done", "inpaint round-trip did not complete (mask format rejected?)")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: out), "inpaint output missing")
+    }
 }

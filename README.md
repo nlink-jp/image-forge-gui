@@ -15,7 +15,10 @@ macOS 14+ (Apple silicon).
   installed LoRAs with per-LoRA weight sliders; only architecture-compatible ones
   are offered; **trigger words are shown and auto-inserted into the prompt**), an
   **Init image** section for
-  **img2img** (drop or choose an image + a **strength** slider), a **ControlNet**
+  **img2img** (drop or choose an image + a **strength** slider) with an optional
+  **inpaint mask** — paint the regions to regenerate right on the init image
+  (brush / eraser, size, clear, invert); the mask is exported at the init image's
+  size and only the painted areas change, a **ControlNet**
   section (pick an architecture-compatible ControlNet + a control image, with a
   **strength** slider and a **Canny** toggle — arch-filtered, so an SDXL base gets
   the SDXL ControlNet and an SD1.5 base the SD1.5 one), core parameters
@@ -111,7 +114,7 @@ catalog, install with progress, remove — ADR-0001). Reuse works both for the
 current session and for images reloaded from a library folder (reconstructed from
 embedded metadata).
 
-**Stays in the CLI:** inpaint, and the less-common model operations
+**Stays in the CLI:** the less-common model operations
 (`quantize` / `import` / `gc`). This app drives the `serve` engine for txt2img /
 img2img with LoRA + ControlNet, one-shot `upscale`, and catalog install/remove.
 

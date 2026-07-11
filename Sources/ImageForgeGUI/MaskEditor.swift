@@ -1,0 +1,158 @@
+import SwiftUI
+import UniformTypeIdentifiers
+
+/// One dab of the mask brush, in **normalized** coordinates (0…1 across the init
+/// image) so it is resolution-independent: the on-screen canvas and the exported
+/// pixel mask share the same numbers. `radius` is a fraction of the image width.
+struct MaskStamp: Equatable {
+    var x: CGFloat
+    var y: CGFloat
+    var radius: CGFloat
+    var erase: Bool
+}
+
+/// A resolution-independent inpaint mask: an ordered list of brush/erase dabs
+/// plus an `inverted` flag. Rendered to a same-size grayscale PNG where **white =
+/// regenerate, black = keep** (image-forge's convention). Pure and value-typed so
+/// the rendering is unit-testable without any UI.
+struct MaskDrawing: Equatable {
+    var stamps: [MaskStamp] = []
+    var inverted: Bool = false
+
+    var isEmpty: Bool { stamps.isEmpty }
+
+    mutating func add(_ s: MaskStamp) { stamps.append(s) }
+    mutating func clear() { stamps.removeAll() }
+
+    /// Render to a `w`×`h` 8-bit grayscale PNG (white where painted = regenerate,
+    /// black elsewhere = keep; `inverted` swaps them). Dabs are replayed in order,
+    /// so an erase dab paints the base color back over earlier brush dabs. Returns
+    /// nil on a bad size or encode failure. Pure — no UIKit/AppKit drawing state.
+    func renderPNG(width w: Int, height h: Int) -> Data? {
+        guard w > 0, h > 0 else { return nil }
+        let base: CGFloat = inverted ? 1 : 0  // keep
+        let brush: CGFloat = inverted ? 0 : 1 // regenerate
+        guard let ctx = CGContext(
+            data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceGray(),
+            bitmapInfo: CGImageAlphaInfo.none.rawValue) else { return nil }
+        ctx.setFillColor(gray: base, alpha: 1)
+        ctx.fill(CGRect(x: 0, y: 0, width: w, height: h))
+        for s in stamps {
+            ctx.setFillColor(gray: s.erase ? base : brush, alpha: 1)
+            let px = s.x * CGFloat(w)
+            let py = (1 - s.y) * CGFloat(h) // CG origin is bottom-left; our y is top-left
+            let r = max(1, s.radius * CGFloat(w))
+            ctx.fillEllipse(in: CGRect(x: px - r, y: py - r, width: 2 * r, height: 2 * r))
+        }
+        guard let cg = ctx.makeImage() else { return nil }
+        let data = NSMutableData()
+        guard let dest = CGImageDestinationCreateWithData(
+            data, UTType.png.identifier as CFString, 1, nil) else { return nil }
+        CGImageDestinationAddImage(dest, cg, nil)
+        guard CGImageDestinationFinalize(dest) else { return nil }
+        return data as Data
+    }
+}
+
+/// A mask-drawing overlay on the init image: paint the regions to regenerate.
+/// The image is shown at a fixed width (aspect-fit) and a `Canvas` of the exact
+/// same rect captures brush strokes as normalized `MaskStamp`s, so screen space
+/// maps 1:1 to the image. Tools: brush / eraser, radius, clear, invert.
+struct MaskCanvasView: View {
+    let initURL: URL
+    @Binding var drawing: MaskDrawing
+
+    @State private var erasing = false
+    /// Brush radius as a fraction of image width (0.02…0.25).
+    @State private var brushFraction: CGFloat = 0.06
+
+    private let displayWidth: CGFloat = 300
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            toolbar
+            imageWithOverlay
+            Text("Paint the areas to regenerate (white). Everything else is kept. Needs an init image.")
+                .font(.caption2).foregroundStyle(.tertiary)
+        }
+    }
+
+    private var toolbar: some View {
+        HStack(spacing: 10) {
+            Picker("", selection: $erasing) {
+                Label("Brush", systemImage: "paintbrush.pointed").tag(false)
+                Label("Erase", systemImage: "eraser").tag(true)
+            }
+            .pickerStyle(.segmented).fixedSize()
+            Slider(value: $brushFraction, in: 0.02...0.25) { Text("Size") }.frame(width: 90)
+            Button("Clear") { drawing.clear() }.disabled(drawing.isEmpty)
+            Toggle("Invert", isOn: $drawing.inverted).toggleStyle(.checkbox)
+        }
+        .controlSize(.small)
+    }
+
+    private var imageWithOverlay: some View {
+        // Load the init image to get its aspect ratio, then size the drawing rect
+        // to the displayed image exactly (no letterboxing → clean coordinate map).
+        let aspect = Self.aspectRatio(of: initURL) ?? 1
+        let size = CGSize(width: displayWidth, height: (displayWidth / aspect).rounded())
+        return ZStack {
+            AsyncImage(url: initURL) { $0.resizable() } placeholder: { Color.gray.opacity(0.2) }
+                .frame(width: size.width, height: size.height)
+            MaskStrokeCanvas(drawing: drawing)
+                .frame(width: size.width, height: size.height)
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { v in
+                            drawing.add(MaskStamp(
+                                x: clamp(v.location.x / size.width),
+                                y: clamp(v.location.y / size.height),
+                                radius: brushFraction, erase: erasing))
+                        })
+        }
+        .frame(width: size.width, height: size.height)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(.secondary.opacity(0.3)))
+    }
+
+    private func clamp(_ v: CGFloat) -> CGFloat { min(max(v, 0), 1) }
+
+    /// The pixel aspect ratio (w/h) of an image file, or nil if unreadable.
+    static func aspectRatio(of url: URL) -> CGFloat? {
+        guard let (w, h) = pixelSize(of: url), h > 0 else { return nil }
+        return CGFloat(w) / CGFloat(h)
+    }
+
+    /// The pixel dimensions of an image file — the mask must be exported at exactly
+    /// this size (image-forge requires the mask to match the init image).
+    static func pixelSize(of url: URL) -> (Int, Int)? {
+        guard let src = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [CFString: Any],
+              let w = props[kCGImagePropertyPixelWidth] as? Int,
+              let h = props[kCGImagePropertyPixelHeight] as? Int else { return nil }
+        return (w, h)
+    }
+}
+
+/// Draws the current mask stamps as a translucent red overlay so the user sees
+/// what they've painted. (The exported PNG is rendered separately, in grayscale.)
+private struct MaskStrokeCanvas: View {
+    let drawing: MaskDrawing
+
+    var body: some View {
+        Canvas { ctx, size in
+            // Replay dabs in order so an erase dab clears earlier brush paint —
+            // matching what renderPNG produces.
+            for s in drawing.stamps {
+                let r = s.radius * size.width
+                let rect = CGRect(x: s.x * size.width - r, y: s.y * size.height - r,
+                                  width: 2 * r, height: 2 * r)
+                ctx.blendMode = s.erase ? .clear : .normal
+                ctx.fill(Path(ellipseIn: rect), with: .color(.red.opacity(s.erase ? 1 : 0.45)))
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}

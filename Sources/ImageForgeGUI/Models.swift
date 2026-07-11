@@ -27,6 +27,7 @@ struct GenerationRequest: Codable, Equatable {
     var hires: String? = nil        // "auto" | "on" | "off"
     var initPath: String? = nil     // json: init — img2img source image
     var strength: Double? = nil     // img2img denoise strength
+    var mask: String? = nil         // inpaint mask, absolute path (with initPath): white=regenerate, black=keep
     /// ControlNet model to steer generation (json: control_net). A resolved file
     /// path (so an older bundled CLI that can't resolve names still works). Loaded
     /// with the base model — changing it reloads the base (ADR-0006).
@@ -46,7 +47,7 @@ struct GenerationRequest: Codable, Equatable {
         case clipSkip = "clip_skip"
         case batch, hires
         case initPath = "init"
-        case strength
+        case strength, mask
         case controlNet = "control_net"
         case control
         case controlStrength = "control_strength"

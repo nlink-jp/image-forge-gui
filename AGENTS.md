@@ -32,6 +32,8 @@ Sources/ImageForgeGUI/
                        selection InspectorBar + context menu + lightbox
   ManageModelsView.swift  Manage Models window (ADR-0001): Installed (Remove→rm --purge)
                        + Available (Install→pull, live progress, NSFW opt-in confirm)
+  MaskEditor.swift     inpaint (#4): pure MaskDrawing.renderPNG (same-size grayscale,
+                       white=regenerate; unit-tested) + MaskCanvasView (brush/erase overlay)
   AppModel.swift       @MainActor ObservableObject: ServeClient owner, models,
                        catalog + installs (model mgmt), results, progress, LibraryStore
                        owner; generate(); load/install/removeModel; menu actions

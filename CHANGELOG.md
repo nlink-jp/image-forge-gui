@@ -3,6 +3,16 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- **Inpaint: paint a mask on the init image** (#4). With an init image set, toggle
+  "Inpaint: paint a mask" and paint the regions to regenerate directly on the image
+  (brush / eraser, adjustable size, clear, invert). The mask is exported at the init
+  image's exact pixel size (white = regenerate, black = keep) and sent as the serve
+  `mask` field. The mask rendering is pure/unit-tested, and a gated integration test
+  runs a real base → mask → inpaint round-trip. Inpaint is no longer CLI-only.
+
 ## [0.7.0] - 2026-07-11
 
 ### Added

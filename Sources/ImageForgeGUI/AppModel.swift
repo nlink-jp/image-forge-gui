@@ -469,6 +469,7 @@ final class AppModel: ObservableObject {
         clipSkip: Int? = nil,
         initPath: String? = nil,
         strength: Double? = nil,
+        maskPath: String? = nil,
         loras: [String]? = nil,
         controlNet: String? = nil,
         control: String? = nil,
@@ -521,6 +522,8 @@ final class AppModel: ObservableObject {
                 hires: hires,
                 initPath: (initPath?.isEmpty ?? true) ? nil : initPath,
                 strength: effStrength,
+                // A mask only means anything alongside an init image (inpaint).
+                mask: (initPath?.isEmpty ?? true) ? nil : (maskPath?.isEmpty ?? true ? nil : maskPath),
                 controlNet: hasControl ? controlNet : nil,
                 control: hasControl ? control : nil,
                 controlStrength: hasControl ? controlStrength : nil,

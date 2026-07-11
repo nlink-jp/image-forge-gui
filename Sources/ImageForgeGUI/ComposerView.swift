@@ -62,6 +62,8 @@ struct ComposerView: View {
     @State private var clipSkipOverride = 0    // 0 = model profile default
     @State private var initImageURL: URL?      // set => img2img
     @State private var strength: Double = 0.6  // img2img denoise strength
+    @State private var maskEnabled = false     // reveal the inpaint mask editor (with an init image)
+    @State private var maskDrawing = MaskDrawing()
     @State private var loraRows: [LoRARow] = []
     @State private var controlNetName: String?      // set + a control image => ControlNet
     @State private var controlImageURL: URL?
@@ -529,7 +531,11 @@ struct ComposerView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(url.lastPathComponent)
                             .font(.caption).lineLimit(1).truncationMode(.middle)
-                        Button("Clear") { initImageURL = nil }.controlSize(.small)
+                        Button("Clear") {
+                            initImageURL = nil
+                            maskEnabled = false
+                            maskDrawing.clear()
+                        }.controlSize(.small)
                     }
                     Spacer()
                 }
@@ -539,6 +545,11 @@ struct ComposerView: View {
                     Text(String(format: "%.2f", strength))
                         .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                         .frame(width: 34, alignment: .trailing)
+                }
+                Toggle("Inpaint: paint a mask", isOn: $maskEnabled)
+                    .font(.caption)
+                if maskEnabled {
+                    MaskCanvasView(initURL: url, drawing: $maskDrawing)
                 }
             } else {
                 Button { chooseInitImage() } label: {
@@ -731,12 +742,31 @@ struct ComposerView: View {
             clipSkip: clipSkipOverride == 0 ? nil : clipSkipOverride,
             initPath: initImageURL?.path,
             strength: initImageURL == nil ? nil : strength,
+            maskPath: renderMaskFile(),
             loras: loraPayload.isEmpty ? nil : loraPayload,
             controlNet: AppModel.controlNetPath(name: controlNetName, models: model.models),
             control: controlImageURL?.path,
             controlStrength: controlStrength,
             canny: canny
         )
+    }
+
+    /// Render the painted inpaint mask to a same-size PNG in a temp file and return
+    /// its path — or nil when inpaint isn't enabled, there's no init image, or the
+    /// mask is empty. The mask must match the init image's pixel size (image-forge
+    /// requires it), so it's rendered at the init image's dimensions.
+    private func renderMaskFile() -> String? {
+        guard let url = initImageURL, maskEnabled, !maskDrawing.isEmpty,
+              let (w, h) = MaskCanvasView.pixelSize(of: url),
+              let png = maskDrawing.renderPNG(width: w, height: h) else { return nil }
+        let dest = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ifgui-mask-\(UUID().uuidString).png")
+        do {
+            try png.write(to: dest)
+            return dest.path
+        } catch {
+            return nil
+        }
     }
 
     /// Present an open panel to pick an init image for img2img.
