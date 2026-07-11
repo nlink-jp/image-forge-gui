@@ -3,7 +3,7 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [0.4.0] - unreleased
+## [0.4.0] - 2026-07-11
 
 ### Added
 - **LoRA trigger words in the Composer.** A LoRA usually only takes effect when
