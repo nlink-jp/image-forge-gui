@@ -3,6 +3,14 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.1] - 2026-07-11
+
+### Fixed
+- Bundles **image-forge v0.17.0**, which makes **SDXL ControlNet** work
+  (`controlnet-canny-sdxl`). The Composer's ControlNet section already arch-filters,
+  so once you `models pull controlnet-canny-sdxl` it's offered for SDXL bases — no UI
+  change. (v0.5.0 bundled v0.16.0, where SDXL ControlNet couldn't load.)
+
 ## [0.5.0] - 2026-07-11
 
 ### Added
