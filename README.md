@@ -49,7 +49,10 @@ macOS 14+ (Apple silicon).
   **install** a model with a live download progress bar, or **remove** an installed
   one to reclaim its multi-GB files. So a first-run user never has to touch the
   terminal to get started. Rated (questionable / explicit) models ask for
-  confirmation before installing.
+  confirmation before installing. Each row has a **compass/Safari button that opens
+  the model's source page** — its Civitai model page or Hugging Face repo — so you
+  can read the model card without searching for it (the URL comes from the CLI's
+  `page_url`).
 - **Status bar**: a live progress bar and status message driven by the engine's
   `ready` / `load` / `progress` / `done` / `error` events; errors surface inline.
 

@@ -52,4 +52,28 @@ final class ModelInfoTests: XCTestCase {
         let models = try ModelInfo.decodeInstalled(from: Data("[]".utf8))
         XCTAssertTrue(models.isEmpty)
     }
+
+    /// page_url (the model's Civitai / HF page) decodes into pageURL and pageLink,
+    /// which the "open model page" link uses. A model without it yields no link.
+    func testPageURLDecodesForInstalledAndCatalog() throws {
+        let json = """
+        [
+          {"name":"anima-yume","arch":"anima","in_catalog":true,
+           "page_url":"https://civitai.com/model-versions/3065644"},
+          {"name":"my-local","arch":"sdxl","in_catalog":false}
+        ]
+        """
+        let models = try ModelInfo.decodeInstalled(from: Data(json.utf8))
+        XCTAssertEqual(models[0].pageURL, "https://civitai.com/model-versions/3065644")
+        XCTAssertEqual(models[0].pageLink?.host, "civitai.com")
+        XCTAssertNil(models[1].pageURL)
+        XCTAssertNil(models[1].pageLink) // a local model has no page link
+
+        let catJSON = """
+        [{"name":"flux1-schnell","arch":"flux","kind":"",
+          "page_url":"https://huggingface.co/leejet/FLUX.1-schnell-gguf"}]
+        """
+        let cat = try CatalogEntry.decodeCatalog(from: Data(catJSON.utf8))
+        XCTAssertEqual(cat[0].pageLink?.host, "huggingface.co")
+    }
 }

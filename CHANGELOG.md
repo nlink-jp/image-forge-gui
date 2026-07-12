@@ -3,6 +3,15 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- **Open a model's source page from Manage Models.** Every model row (installed and
+  catalog) now has a compass/Safari button that opens the model's Civitai model page
+  or Hugging Face repo in the browser, so you can read the model card without
+  searching for it. The URL comes from the CLI's new `page_url` field in
+  `models list --json` (image-forge ≥ v0.23.0), decoded onto `ModelInfo`/`CatalogEntry`.
+
 ## [0.8.1] - 2026-07-12
 
 ### Changed

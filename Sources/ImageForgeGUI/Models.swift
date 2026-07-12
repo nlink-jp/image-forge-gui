@@ -102,8 +102,18 @@ struct ModelInfo: Codable, Identifiable, Equatable {
     /// Credit text to give when the license requires attribution (json:
     /// attribution). Present only for models flagged `attribution`.
     var attribution: String?
+    /// The model's source web page — its Civitai model page or Hugging Face repo
+    /// (json: page_url). The CLI derives it from the catalog; a front-end offers
+    /// an "open model page" link. Absent for a user-local model not in the catalog.
+    var pageURL: String?
 
     var id: String { name }
+
+    /// The source page as a URL, if one is known and well-formed.
+    var pageLink: URL? {
+        guard let s = pageURL, !s.isEmpty else { return nil }
+        return URL(string: s)
+    }
 
     /// Whether this model's license carries a notable restriction to highlight.
     var hasLicenseFlags: Bool { !(licenseFlags ?? []).isEmpty }
@@ -135,6 +145,7 @@ struct ModelInfo: Codable, Identifiable, Equatable {
         case triggerWords = "trigger_words"
         case licenseFlags = "license_flags"
         case attribution
+        case pageURL = "page_url"
     }
 
     /// Decode the installed-model array from `image-forge models list --json`.
@@ -169,8 +180,17 @@ struct CatalogEntry: Codable, Identifiable, Equatable {
     var installed: Bool?
     var notes: String?
     var licenseFlags: [String]? // json: license_flags
+    /// The model's source web page — its Civitai model page or Hugging Face repo
+    /// (json: page_url). Used for an "open model page" link.
+    var pageURL: String?
 
     var id: String { name }
+
+    /// The source page as a URL, if one is known and well-formed.
+    var pageLink: URL? {
+        guard let s = pageURL, !s.isEmpty else { return nil }
+        return URL(string: s)
+    }
 
     /// Whether installing this entry requires the NSFW opt-in (`--allow-nsfw`).
     var requiresOptIn: Bool { needsOptIn ?? false }
@@ -198,6 +218,7 @@ struct CatalogEntry: Codable, Identifiable, Equatable {
         case needsOptIn = "needs_opt_in"
         case experimental, installed, notes
         case licenseFlags = "license_flags"
+        case pageURL = "page_url"
     }
 
     /// Decode the catalog array from `image-forge models list --catalog --json`

@@ -112,6 +112,7 @@ struct ManageModelsView: View {
                 }
             }
             Spacer()
+            pageLink(m.pageLink)
             Button(role: .destructive) { pendingRemove = m } label: {
                 Label("Remove", systemImage: "trash")
             }
@@ -142,9 +143,23 @@ struct ManageModelsView: View {
                 }
             }
             Spacer(minLength: 8)
+            pageLink(e.pageLink)
             installControl(e)
         }
         .padding(.vertical, 2)
+    }
+
+    /// A borderless link that opens the model's source page (Civitai / HF) in the
+    /// default browser. Renders nothing when the model has no known page.
+    @ViewBuilder private func pageLink(_ url: URL?) -> some View {
+        if let url {
+            Link(destination: url) {
+                Image(systemName: "safari")
+            }
+            .buttonStyle(.borderless)
+            .help("Open this model's page (Civitai / Hugging Face) in your browser")
+            .accessibilityLabel("Open model page")
+        }
     }
 
     @ViewBuilder private func installControl(_ e: CatalogEntry) -> some View {
