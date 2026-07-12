@@ -3,6 +3,16 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.8.1] - 2026-07-12
+
+### Changed
+- **Bundled CLI updated to image-forge v0.22.0.** No app-code changes — this refresh
+  brings the new catalog models into the app's model list (Manage Models / Composer):
+  the Anima checkpoints `anima-yume` and `nova-anime-am` (Civitai DiT + shared Anima
+  encoders/VAE) and the Illustrious SDXL checkpoints `akium-ijin` and `akium-lumen`.
+  The CLI also gained the ability to source a multi-component model's DiT from Civitai
+  (`civitai:<versionId>`), which is what the new Anima entries use.
+
 ## [0.8.0] - 2026-07-12
 
 ### Added
