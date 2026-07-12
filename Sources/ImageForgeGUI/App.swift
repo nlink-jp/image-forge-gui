@@ -37,6 +37,13 @@ struct AppCommands: Commands {
             Button("About ImageForgeGUI") { model.showAboutPanel() }
         }
 
+        // App menu → Manage Models. Model install/remove is an app-level, settings-y
+        // task, so it lives in the app menu (next to About) rather than buried in View.
+        CommandGroup(after: .appInfo) {
+            Button("Manage Models…") { model.requestManageModels() }
+                .keyboardShortcut("m", modifiers: [.command, .shift])
+        }
+
         // File → generation-relevant items (replaces the default "New Window").
         CommandGroup(replacing: .newItem) {
             Button("New Generation") { model.requestNewGeneration() }
@@ -52,10 +59,8 @@ struct AppCommands: Commands {
                 .disabled(model.selection.isEmpty)
         }
 
-        // View → Manage Models / Refresh Models.
+        // View → Refresh Models (reloading the installed list is a view action).
         CommandGroup(after: .sidebar) {
-            Button("Manage Models…") { model.requestManageModels() }
-                .keyboardShortcut("m", modifiers: [.command, .shift])
             Button("Refresh Models") { model.loadModels() }
                 .keyboardShortcut("r", modifiers: .command)
         }

@@ -57,7 +57,8 @@ struct StatusBar: View {
             }
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        // Fixed height so the bar doesn't jump when the progress indicator (taller
+        // than the text) appears/disappears between idle and generating/upscaling.
+        .frame(maxWidth: .infinity, minHeight: 34, maxHeight: 34, alignment: .leading)
     }
 }

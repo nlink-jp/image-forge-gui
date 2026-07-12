@@ -676,6 +676,7 @@ final class AppModel: ObservableObject {
             params.height = m.height
             params.sampler = m.sampler
             params.scheduler = m.scheduler
+            params.model = m.model ?? params.model
             return GeneratedImage(
                 id: img.id, url: img.url,
                 prompt: m.prompt ?? img.prompt,

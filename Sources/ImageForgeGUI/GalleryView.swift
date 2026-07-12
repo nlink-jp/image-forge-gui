@@ -311,6 +311,11 @@ struct InspectorBar: View {
                     .lineLimit(2)
                     .textSelection(.enabled)
                 HStack(spacing: 12) {
+                    if let m = image.params.model, !m.isEmpty {
+                        Label(m, systemImage: "cube.box")
+                            .font(.caption).foregroundStyle(.secondary)
+                            .labelStyle(.titleAndIcon)
+                    }
                     if let seed = image.seed {
                         Text("seed \(seed)").font(.caption).foregroundStyle(.secondary)
                     }
@@ -449,6 +454,9 @@ struct LightboxView: View {
                 .textSelection(.enabled)
                 .frame(maxWidth: 720)
             HStack(spacing: 12) {
+                if let m = img.params.model, !m.isEmpty {
+                    Label(m, systemImage: "cube.box").labelStyle(.titleAndIcon)
+                }
                 if let s = img.seed { Text("seed \(s)") }
                 if let w = img.pixelWidth ?? img.params.width,
                    let h = img.pixelHeight ?? img.params.height { Text("\(w)×\(h)") }
