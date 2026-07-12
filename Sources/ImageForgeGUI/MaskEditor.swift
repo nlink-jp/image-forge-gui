@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -66,55 +67,122 @@ struct MaskCanvasView: View {
     @State private var erasing = false
     /// Brush radius as a fraction of image width (0.02…0.25).
     @State private var brushFraction: CGFloat = 0.06
-
-    private let displayWidth: CGFloat = 300
+    /// Cursor position within the canvas (nil when the mouse is elsewhere), for the
+    /// brush-size ring; and whether we've hidden the system arrow over the canvas.
+    @State private var cursorLocation: CGPoint?
+    @State private var cursorHidden = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             toolbar
             imageWithOverlay
-            Text("Paint the areas to regenerate (white). Everything else is kept. Needs an init image.")
+            legend
+            Text(drawing.inverted
+                 ? "Inverted: brush marks the areas to KEEP — everything else (red) is regenerated."
+                 : "Brush the areas to regenerate (shown red). Everything you don't paint keeps the original.")
                 .font(.caption2).foregroundStyle(.tertiary)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var toolbar: some View {
-        HStack(spacing: 10) {
-            Picker("", selection: $erasing) {
-                Label("Brush", systemImage: "paintbrush.pointed").tag(false)
-                Label("Erase", systemImage: "eraser").tag(true)
+    /// Always-accurate colour key: red always means "will be regenerated",
+    /// regardless of the Invert toggle (which only changes *which* area is red).
+    private var legend: some View {
+        HStack(spacing: 14) {
+            Label {
+                Text("regenerated")
+            } icon: {
+                RoundedRectangle(cornerRadius: 2).fill(.red.opacity(0.4)).frame(width: 12, height: 12)
             }
-            .pickerStyle(.segmented).fixedSize()
-            Slider(value: $brushFraction, in: 0.02...0.25) { Text("Size") }.frame(width: 90)
-            Button("Clear") { drawing.clear() }.disabled(drawing.isEmpty)
-            Toggle("Invert", isOn: $drawing.inverted).toggleStyle(.checkbox)
+            Label {
+                Text("kept (original)")
+            } icon: {
+                RoundedRectangle(cornerRadius: 2).strokeBorder(.secondary).frame(width: 12, height: 12)
+            }
+        }
+        .font(.caption2).foregroundStyle(.secondary)
+    }
+
+    // Two compact rows so the tools fit the narrow Composer panel without overflow.
+    private var toolbar: some View {
+        VStack(spacing: 6) {
+            HStack(spacing: 8) {
+                Picker("", selection: $erasing) {
+                    Label("Brush", systemImage: "paintbrush.pointed").tag(false)
+                    Label("Erase", systemImage: "eraser").tag(true)
+                }
+                .pickerStyle(.segmented).labelsHidden()
+                Toggle("Invert", isOn: $drawing.inverted).toggleStyle(.checkbox).fixedSize()
+                    .help("Swap the mask: the brush marks what to KEEP; everything else is regenerated.")
+            }
+            HStack(spacing: 8) {
+                Image(systemName: "circle.dashed").foregroundStyle(.secondary)
+                Slider(value: $brushFraction, in: 0.02...0.25)
+                Button("Clear") { drawing.clear() }.disabled(drawing.isEmpty).fixedSize()
+            }
         }
         .controlSize(.small)
     }
 
+    // The image fills the panel width at its own aspect ratio (no fixed size, so it
+    // never overflows). A GeometryReader supplies the actual rendered size, so drag
+    // points map 1:1 to normalized image coordinates.
     private var imageWithOverlay: some View {
-        // Load the init image to get its aspect ratio, then size the drawing rect
-        // to the displayed image exactly (no letterboxing → clean coordinate map).
         let aspect = Self.aspectRatio(of: initURL) ?? 1
-        let size = CGSize(width: displayWidth, height: (displayWidth / aspect).rounded())
-        return ZStack {
-            AsyncImage(url: initURL) { $0.resizable() } placeholder: { Color.gray.opacity(0.2) }
-                .frame(width: size.width, height: size.height)
-            MaskStrokeCanvas(drawing: drawing)
-                .frame(width: size.width, height: size.height)
-                .contentShape(Rectangle())
-                .gesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { v in
-                            drawing.add(MaskStamp(
-                                x: clamp(v.location.x / size.width),
-                                y: clamp(v.location.y / size.height),
-                                radius: brushFraction, erase: erasing))
-                        })
+        return Color.clear
+            .aspectRatio(aspect, contentMode: .fit)
+            .overlay {
+                GeometryReader { geo in
+                    ZStack {
+                        AsyncImage(url: initURL) { $0.resizable() }
+                            placeholder: { Color.gray.opacity(0.2) }
+                        MaskStrokeCanvas(drawing: drawing)
+                        brushRing(in: geo.size)
+                        Color.clear.contentShape(Rectangle())
+                            .gesture(
+                                DragGesture(minimumDistance: 0).onChanged { v in
+                                    guard geo.size.width > 0, geo.size.height > 0 else { return }
+                                    cursorLocation = v.location
+                                    drawing.add(MaskStamp(
+                                        x: clamp(v.location.x / geo.size.width),
+                                        y: clamp(v.location.y / geo.size.height),
+                                        radius: brushFraction, erase: erasing))
+                                })
+                            .onContinuousHover(coordinateSpace: .local) { phase in
+                                switch phase {
+                                case .active(let p):
+                                    cursorLocation = p
+                                    if !cursorHidden { NSCursor.hide(); cursorHidden = true }
+                                case .ended:
+                                    cursorLocation = nil
+                                    unhideCursor()
+                                }
+                            }
+                    }
+                }
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(.secondary.opacity(0.3)))
+            .onDisappear(perform: unhideCursor) // never leave the arrow hidden
+    }
+
+    /// A ring at the cursor showing the exact brush footprint (white for erase).
+    @ViewBuilder private func brushRing(in size: CGSize) -> some View {
+        if let loc = cursorLocation, size.width > 0 {
+            let r = brushFraction * size.width
+            let color: Color = erasing ? .white : .red
+            Circle()
+                .fill(color.opacity(0.12))
+                .overlay(Circle().strokeBorder(color.opacity(0.9), lineWidth: 1.5))
+                .frame(width: 2 * r, height: 2 * r)
+                .position(loc)
+                .allowsHitTesting(false)
         }
-        .frame(width: size.width, height: size.height)
-        .clipShape(RoundedRectangle(cornerRadius: 6))
-        .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(.secondary.opacity(0.3)))
+    }
+
+    private func unhideCursor() {
+        if cursorHidden { NSCursor.unhide(); cursorHidden = false }
     }
 
     private func clamp(_ v: CGFloat) -> CGFloat { min(max(v, 0), 1) }
@@ -143,14 +211,24 @@ private struct MaskStrokeCanvas: View {
 
     var body: some View {
         Canvas { ctx, size in
-            // Replay dabs in order so an erase dab clears earlier brush paint —
-            // matching what renderPNG produces.
-            for s in drawing.stamps {
-                let r = s.radius * size.width
-                let rect = CGRect(x: s.x * size.width - r, y: s.y * size.height - r,
-                                  width: 2 * r, height: 2 * r)
-                ctx.blendMode = s.erase ? .clear : .normal
-                ctx.fill(Path(ellipseIn: rect), with: .color(.red.opacity(s.erase ? 1 : 0.45)))
+            // Red marks what will be REGENERATED — matching the exported mask. When
+            // inverted, the base is red (regenerate everywhere) and brush dabs clear
+            // it (paint = keep); otherwise the base is clear and brush dabs add red.
+            // Drawn into one layer, composited once at 0.4 so overlaps stay uniformly
+            // translucent (you can see the image through them) instead of compounding.
+            ctx.opacity = 0.4
+            ctx.drawLayer { layer in
+                if drawing.inverted {
+                    layer.fill(Path(CGRect(origin: .zero, size: size)), with: .color(.red))
+                }
+                for s in drawing.stamps {
+                    let r = s.radius * size.width
+                    let rect = CGRect(x: s.x * size.width - r, y: s.y * size.height - r,
+                                      width: 2 * r, height: 2 * r)
+                    let regenerate = drawing.inverted ? s.erase : !s.erase
+                    layer.blendMode = regenerate ? .normal : .clear
+                    layer.fill(Path(ellipseIn: rect), with: .color(.red))
+                }
             }
         }
         .allowsHitTesting(false)

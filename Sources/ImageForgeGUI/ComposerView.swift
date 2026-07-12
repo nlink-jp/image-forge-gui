@@ -546,7 +546,7 @@ struct ComposerView: View {
                         .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
                         .frame(width: 34, alignment: .trailing)
                 }
-                Toggle("Inpaint: paint a mask", isOn: $maskEnabled)
+                Toggle("Inpaint: paint the area to regenerate", isOn: $maskEnabled)
                     .font(.caption)
                 if maskEnabled {
                     MaskCanvasView(initURL: url, drawing: $maskDrawing)
