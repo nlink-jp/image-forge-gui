@@ -3,7 +3,7 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.9.0] - 2026-07-12
 
 ### Added
 - **Open a model's source page from Manage Models.** Every model row (installed and
@@ -11,6 +11,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   or Hugging Face repo in the browser, so you can read the model card without
   searching for it. The URL comes from the CLI's new `page_url` field in
   `models list --json` (image-forge ≥ v0.23.0), decoded onto `ModelInfo`/`CatalogEntry`.
+
+### Changed
+- **Bundled CLI updated to image-forge v0.23.0** (adds `models open` / `page_url`,
+  which this feature relies on).
 
 ## [0.8.1] - 2026-07-12
 
