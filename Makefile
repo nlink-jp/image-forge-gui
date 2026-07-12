@@ -73,3 +73,13 @@ run:
 ## clean: remove build artifacts
 clean:
 	rm -rf $(DIST_DIR) .build
+
+# Homebrew tap generation (see scripts/release-brew.mk). After `make package`,
+# `make brew` generates this cask from the built darwin-arm64 zip into the local
+# nlink-jp/homebrew-tap checkout.
+BREW_KIND := cask
+BREW_DESC := SwiftUI front-end for the image-forge local image generator
+BREW_NAME := $(NAME)
+BREW_APP := $(APP_NAME).app
+BREW_BUNDLE_ID := $(BUNDLE_ID)
+include scripts/release-brew.mk
