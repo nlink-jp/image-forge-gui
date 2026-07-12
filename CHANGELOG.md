@@ -3,15 +3,27 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.8.0] - 2026-07-12
 
 ### Added
 - **Inpaint: paint a mask on the init image** (#4). With an init image set, toggle
-  "Inpaint: paint a mask" and paint the regions to regenerate directly on the image
-  (brush / eraser, adjustable size, clear, invert). The mask is exported at the init
-  image's exact pixel size (white = regenerate, black = keep) and sent as the serve
-  `mask` field. The mask rendering is pure/unit-tested, and a gated integration test
-  runs a real base → mask → inpaint round-trip. Inpaint is no longer CLI-only.
+  "Inpaint: paint the area to regenerate" and paint directly on the image (brush /
+  eraser, adjustable size, clear, invert). The painted area is shown as a uniform
+  translucent red overlay, with a brush-size ring at the cursor; a legend and a
+  live caption spell out that red = regenerated / unpainted = kept (Invert flips
+  it). The mask is exported at the init image's exact pixel size (white = regenerate,
+  black = keep) and sent as the serve `mask` field. Mask rendering is pure/unit-
+  tested, and a gated integration test runs a real base → mask → inpaint round-trip.
+  Inpaint is no longer CLI-only.
+- The **model name** now shows in the gallery inspector and the lightbox (library-
+  reloaded images read it from the embedded PNG metadata).
+
+### Changed
+- **Manage Models** moved from the View menu to the App menu (next to About) — it's
+  an app-level, settings-y task and was hard to find in View.
+- The bottom **status bar** has a fixed height, so it no longer jumps when the
+  progress indicator appears/disappears.
+- Bundles **image-forge v0.21.0** (load-time `--wtype` quantization).
 
 ## [0.7.0] - 2026-07-11
 
