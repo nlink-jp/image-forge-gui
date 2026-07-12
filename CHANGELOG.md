@@ -3,6 +3,18 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.9.1] - 2026-07-12
+
+### Changed
+- **Release archive renamed** from `ImageForgeGUI-vX.Y.Z-macos-arm64.zip` to
+  `image-forge-gui-vX.Y.Z-darwin-arm64.zip`, aligning the tool name (kebab-case
+  repo name) and OS token (`darwin`) with the org-wide Release Archive Standard
+  (`nlink-jp/.github` CONVENTIONS.md). The archive still contains the notarized,
+  stapled `ImageForgeGUI.app`. image-forge-gui is a native SwiftUI app and
+  remains **darwin/arm64 only**.
+
+No change to the app's behaviour — a packaging / release-naming change.
+
 ## [0.9.0] - 2026-07-12
 
 ### Added
