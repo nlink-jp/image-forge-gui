@@ -3,6 +3,15 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.9.2] - 2026-07-14
+
+### Changed
+- **Bundled CLI updated to image-forge v0.24.0.** No app behaviour change — the
+  new `models pull --kind/--arch/--trigger` overrides (for typing a non-catalog
+  LoRA/ControlNet at pull time) are a CLI-only surface the GUI doesn't drive.
+  Refreshed so the bundled CLI matches the standalone image-forge v0.24.0 release
+  instead of shipping an older build.
+
 ## [0.9.1] - 2026-07-12
 
 ### Changed
