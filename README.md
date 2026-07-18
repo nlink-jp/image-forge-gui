@@ -33,7 +33,9 @@ macOS 14+ (Apple silicon).
 - **Gallery** (main): a grid of the active library's PNGs. Click to select
   (**⌘-click** to toggle, **⇧-click** for a range); a bottom inspector shows the
   prompt, seed, and size for a lone selection, or a batch bar (**Delete** to Trash
-  / **Export** / **Move to Library**) for several. Double-click (or **View**) opens
+  / **Export** / **Move to Library**) for several. If the library lives on a volume
+  with no Trash (e.g. an SMB/network share), Delete asks a second time to remove
+  the images **permanently** instead. Double-click (or **View**) opens
   a **lightbox** with prev/next (←/→) and reveal. From the context menu,
   inspector, or lightbox you can **Reuse Prompt**, **Reuse All Parameters**
   ("make similar" — copies every setting, so a new seed yields a variation),

@@ -30,7 +30,9 @@ macOS 14+（Apple silicon）。
 - **Gallery**（メイン）: アクティブなライブラリの PNG のグリッド。クリックで選択
   （**⌘クリック**でトグル、**⇧クリック**で範囲選択）。下部には、単一選択時はインスペクタ
   （プロンプト・seed・サイズ）、複数選択時はバッチバー（**Delete**＝ゴミ箱／**Export**／
-  **Move to Library**）を表示。ダブルクリック（または **View**）で **ライトボックス**
+  **Move to Library**）を表示。ライブラリがゴミ箱非対応のボリューム（SMB などのネットワーク
+  共有）にある場合、Delete は代わりに **完全削除** するか再確認します。
+  ダブルクリック（または **View**）で **ライトボックス**
   （←/→ で前後移動、Finder 表示）。コンテキストメニュー・インスペクタ・ライトボックス
   から **Reuse Prompt**、**Reuse All Parameters**（"make similar"＝全設定をコピーするので、
   新しい seed でバリエーションになる）、**Use as Init Image**（Composer に送って img2img）、

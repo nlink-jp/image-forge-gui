@@ -92,6 +92,22 @@ struct GalleryView: View {
         } message: { ids in
             Text("\(ids.count) image\(ids.count == 1 ? "" : "s") will be moved to the Trash — you can restore \(ids.count == 1 ? "it" : "them") from there.")
         }
+        .confirmationDialog(
+            "Permanently delete?",
+            isPresented: Binding(
+                get: { model.pendingPermanentDeletion != nil },
+                set: { if !$0 { model.pendingPermanentDeletion = nil } }),
+            presenting: model.pendingPermanentDeletion
+        ) { ids in
+            Button(ids.count == 1 ? "Delete Permanently" : "Delete \(ids.count) Permanently",
+                   role: .destructive) {
+                model.permanentlyDelete(ids)
+                model.pendingPermanentDeletion = nil
+            }
+            Button("Cancel", role: .cancel) { model.pendingPermanentDeletion = nil }
+        } message: { ids in
+            Text("\(ids.count) image\(ids.count == 1 ? "" : "s") couldn't be moved to the Trash — this library's volume doesn't support it (e.g. a network share). Deleting now removes \(ids.count == 1 ? "it" : "them") permanently and can't be undone.")
+        }
     }
 
     /// A slim header above the grid: a library switcher (folder menu) on the left

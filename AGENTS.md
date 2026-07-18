@@ -94,6 +94,15 @@ assets/                AppIcon-1024.png (→ AppIcon.icns at build)
   `loadGeneration` token discards a stale load after a switch, and the parsed
   metadata is *merged* into `results` (mapped by URL, not reassigned) so images
   generated during the load survive. Default/last libraries are never removable.
+- **Delete → Trash, with a permanent-delete fallback.** `delete()` moves each
+  image to the Trash via `trashItem`. A library on a volume with no Trash (an
+  SMB/network share) makes `trashItem` throw; rather than silently `removeItem`
+  or stranding the files, the ids that failed are queued into
+  `pendingPermanentDeletion`, which raises a **second** confirmation dialog
+  ("can't be undone") whose confirm calls `permanentlyDelete()` (`removeItem`).
+  The batch loop is the pure, op-injected `AppModel.applyBatch(_:_:)` (tested
+  without touching the real Trash); a mixed selection splits cleanly (trashable
+  ones removed, the rest escalated).
 - **PNG metadata parser.** `PngMetadata` walks `tEXt` (Latin-1) / `iTXt` (UTF-8)
   chunks, preferring the `image-forge` JSON (shape = `internal/cli/metadata.go`
   `imgforgeMeta`), else the A1111 `parameters` string. It mirrors the writer in

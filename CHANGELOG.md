@@ -3,6 +3,17 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+- **Deleting from a library on a volume with no Trash now works.** When the active
+  library lived on an SMB / network-mounted volume, "Move to Trash" failed
+  silently — macOS cannot put files in the Trash on such volumes, so the images
+  stayed on disk and in the gallery. Delete now detects the failed items and asks
+  a second time to remove them **permanently** (an explicit, cannot-be-undone
+  confirmation) instead of stranding them. A mixed selection splits cleanly: files
+  on a Trash-capable volume go to the Trash, the rest escalate to permanent delete.
+
 ## [0.9.2] - 2026-07-14
 
 ### Changed

@@ -38,6 +38,10 @@ final class AppModel: ObservableObject {
     // Images awaiting a delete confirmation (nil = no dialog). The gallery binds a
     // confirmation dialog to this; on confirm it calls `delete(_:)`.
     @Published var pendingDeletion: Set<GeneratedImage.ID>?
+    // Images that couldn't be moved to the Trash (the library's volume doesn't
+    // support it, e.g. an SMB share) and are awaiting an explicit permanent-delete
+    // confirmation (nil = no dialog). On confirm the gallery calls `permanentlyDelete(_:)`.
+    @Published var pendingPermanentDeletion: Set<GeneratedImage.ID>?
 
     // Live status.
     @Published var isGenerating = false
@@ -793,23 +797,72 @@ final class AppModel: ObservableObject {
     var otherLibraries: [Library] { libraries.filter { $0.id != activeLibraryID } }
 
     /// Move images (by id) to the Trash and drop them from the gallery.
+    ///
+    /// On a volume that has no Trash (e.g. an SMB-mounted library), `trashItem`
+    /// throws and the files would otherwise be stranded. Rather than silently
+    /// removing them, the ids that couldn't be trashed are queued into
+    /// `pendingPermanentDeletion`, which raises an explicit permanent-delete
+    /// confirmation in the gallery.
     func delete(_ ids: Set<GeneratedImage.ID>) {
         let imgs = results.filter { ids.contains($0.id) }
         guard !imgs.isEmpty else { return }
-        var done: Set<GeneratedImage.ID> = []
-        for img in imgs {
+        let outcome = Self.applyBatch(imgs.map { (id: $0.id, url: $0.url) }) {
+            try FileManager.default.trashItem(at: $0, resultingItemURL: nil)
+        }
+        forget(outcome.ok)
+        if !outcome.ok.isEmpty {
+            statusMessage = "Moved \(outcome.ok.count) image\(outcome.ok.count == 1 ? "" : "s") to Trash"
+        }
+        if !outcome.failed.isEmpty {
+            pendingPermanentDeletion = Set(outcome.failed.map(\.id))
+        }
+    }
+
+    /// Permanently remove images (by id) from disk — the confirmed fallback when
+    /// their volume has no Trash. Only reached via an explicit permanent-delete
+    /// confirmation. Errors here are surfaced per file (they cannot be undone, so
+    /// there is nowhere to escalate to).
+    func permanentlyDelete(_ ids: Set<GeneratedImage.ID>) {
+        let imgs = results.filter { ids.contains($0.id) }
+        guard !imgs.isEmpty else { return }
+        let outcome = Self.applyBatch(imgs.map { (id: $0.id, url: $0.url) }) {
+            try FileManager.default.removeItem(at: $0)
+        }
+        forget(outcome.ok)
+        if !outcome.ok.isEmpty {
+            statusMessage = "Permanently deleted \(outcome.ok.count) image\(outcome.ok.count == 1 ? "" : "s")"
+        }
+        for f in outcome.failed {
+            errorMessage = "Couldn't delete \(f.url.lastPathComponent): \(f.error.localizedDescription)"
+        }
+    }
+
+    /// Drop ids from the gallery results and the current selection.
+    private func forget(_ ids: Set<GeneratedImage.ID>) {
+        guard !ids.isEmpty else { return }
+        results.removeAll { ids.contains($0.id) }
+        selection.subtract(ids)
+    }
+
+    /// Apply a throwing per-file operation to each `(id, url)`, partitioning them
+    /// into the ids that succeeded and the ones that threw (with the URL and error
+    /// for messaging). Pure and op-injected so the batch delete/trash → fallback
+    /// logic is testable without touching the real Trash or filesystem.
+    nonisolated static func applyBatch(
+        _ items: [(id: GeneratedImage.ID, url: URL)],
+        _ op: (URL) throws -> Void
+    ) -> (ok: Set<GeneratedImage.ID>, failed: [(id: GeneratedImage.ID, url: URL, error: Error)]) {
+        var ok: Set<GeneratedImage.ID> = []
+        var failed: [(id: GeneratedImage.ID, url: URL, error: Error)] = []
+        for item in items {
             do {
-                try FileManager.default.trashItem(at: img.url, resultingItemURL: nil)
-                done.insert(img.id)
+                try op(item.url)
+                ok.insert(item.id)
             } catch {
-                errorMessage = "Couldn't delete \(img.url.lastPathComponent): \(error.localizedDescription)"
+                failed.append((id: item.id, url: item.url, error: error))
             }
         }
-        results.removeAll { done.contains($0.id) }
-        selection.subtract(done)
-        if !done.isEmpty {
-            statusMessage = "Moved \(done.count) image\(done.count == 1 ? "" : "s") to Trash"
-        }
+        return (ok, failed)
     }
 
     /// Ask to delete these images — shows the confirmation dialog (delete is
