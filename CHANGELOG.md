@@ -3,7 +3,7 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.9.3] - 2026-07-19
 
 ### Fixed
 - **Deleting from a library on a volume with no Trash now works.** When the active
