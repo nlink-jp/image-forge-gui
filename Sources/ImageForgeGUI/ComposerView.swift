@@ -193,11 +193,14 @@ struct ComposerView: View {
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Count: \(count)")
+                    // No `step:` — on macOS that draws a tick mark per increment,
+                    // which at 50 is a comb of hairlines. The binding rounds to a
+                    // whole number anyway, so the slider still lands on integers.
                     Slider(
                         value: Binding(
                             get: { Double(count) },
                             set: { count = Int($0.rounded()) }),
-                        in: 1...Double(Self.maxCount), step: 1,
+                        in: 1...Double(Self.maxCount),
                         minimumValueLabel: Text("1"), maximumValueLabel: Text("\(Self.maxCount)")
                     ) { Text("Count") }
                 }
