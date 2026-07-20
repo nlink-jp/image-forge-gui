@@ -75,7 +75,15 @@ struct ComposerView: View {
     /// (kept out of the prompt field to avoid clutter/accumulation).
     @AppStorage("autoAddTriggers") private var autoAddTriggers = true
 
+    /// Presents the "stop now / finish current" choice (batch runs only).
+    @State private var showStopOptions = false
+
     @FocusState private var promptFocused: Bool
+
+    /// Largest batch the Count slider offers. Images render one at a time, so a
+    /// big batch is a long unattended run rather than a memory risk — which is why
+    /// it's paired with a graceful stop (see `AppModel.stopAfterCurrentImage`).
+    static let maxCount = 50
 
     /// Common SDXL-friendly dimensions; nil = the model profile default.
     private static let sizes: [Int] = [512, 640, 768, 832, 896, 1024, 1152, 1216, 1344]
@@ -189,8 +197,8 @@ struct ComposerView: View {
                         value: Binding(
                             get: { Double(count) },
                             set: { count = Int($0.rounded()) }),
-                        in: 1...16, step: 1,
-                        minimumValueLabel: Text("1"), maximumValueLabel: Text("16")
+                        in: 1...Double(Self.maxCount), step: 1,
+                        minimumValueLabel: Text("1"), maximumValueLabel: Text("\(Self.maxCount)")
                     ) { Text("Count") }
                 }
             }
@@ -224,13 +232,25 @@ struct ComposerView: View {
 
             Section {
                 if model.isGenerating {
-                    Button(role: .destructive, action: model.cancelGeneration) {
+                    // With images still queued, stopping is ambiguous — the current
+                    // render may be minutes in and worth keeping — so ask. With
+                    // nothing queued there's only one outcome; stop straight away.
+                    Button(role: .destructive, action: requestStop) {
                         Label("Cancel", systemImage: "stop.fill")
                             .frame(maxWidth: .infinity)
                     }
                     .controlSize(.large)
                     .buttonStyle(.bordered)
                     .keyboardShortcut(".", modifiers: .command)
+                    .confirmationDialog(
+                        "Stop generating?", isPresented: $showStopOptions, titleVisibility: .visible
+                    ) {
+                        Button("Stop Now", role: .destructive, action: model.cancelGeneration)
+                        Button("Finish Current Image", action: model.stopAfterCurrentImage)
+                        Button("Keep Generating", role: .cancel) {}
+                    } message: {
+                        Text(stopDialogMessage)
+                    }
                 } else {
                     Button(action: generate) {
                         Label("Generate", systemImage: "wand.and.stars")
@@ -722,6 +742,27 @@ struct ComposerView: View {
             }
         }
         promptFocused = true
+    }
+
+    /// Cancel pressed (or ⌘.): offer the stop choices when a batch still has
+    /// queued images, otherwise stop immediately — with nothing queued, "finish
+    /// the current image" and "stop now" differ only in whether the in-flight
+    /// render is thrown away, and a one-image run has no queue to save.
+    private func requestStop() {
+        if model.canStopAfterCurrentImage {
+            showStopOptions = true
+        } else {
+            model.cancelGeneration()
+        }
+    }
+
+    private var stopDialogMessage: String { Self.stopDialogMessage(queued: model.queuedCount) }
+
+    /// Pure so the wording is testable. `queued` excludes the image being rendered.
+    static func stopDialogMessage(queued: Int) -> String {
+        let images = "\(queued) image\(queued == 1 ? "" : "s")"
+        return "\(images) still queued. Stopping now discards the image being "
+            + "rendered; finishing it keeps it and drops the rest."
     }
 
     private func generate() {

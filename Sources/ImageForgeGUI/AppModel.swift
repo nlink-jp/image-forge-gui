@@ -272,10 +272,16 @@ final class AppModel: ObservableObject {
     // metadata parse from a previous library can't overwrite the new results.
     private var loadGeneration = 0
 
-    // Batch bookkeeping: requests submitted but not yet completed, keyed by their
-    // unique output path so a `done` event maps back to its request.
-    private var pending = 0
-    private var inFlight: [String: GenerationRequest] = [:]
+    // Batch bookkeeping. The app holds the queue and submits one request at a
+    // time (see BatchQueue) so a batch can be stopped gracefully.
+    @Published private(set) var batch = BatchQueue()
+
+    /// Images a graceful stop would drop (shown in the stop dialog).
+    var queuedCount: Int { batch.remaining }
+
+    /// Whether "finish the current image, then stop" is a meaningful choice — if
+    /// not, the Cancel button stops immediately rather than offering options.
+    var canStopAfterCurrentImage: Bool { isGenerating && batch.canWindDown }
 
     init() {
         let store = LibraryStore(
@@ -325,18 +331,18 @@ final class AppModel: ObservableObject {
         }
     }
 
-    /// Stop an in-flight generation. sd.cpp renders are blocking C calls that
+    /// Stop the current generation *now*. sd.cpp renders are blocking C calls that
     /// can't be interrupted in place, so the only immediate stop is to terminate
-    /// the serve process — which kills the current render and discards any queued
-    /// batch items — then relaunch it fresh. The next generation reloads the model.
+    /// the serve process — which kills the current render and discards its partial
+    /// output — then relaunch it fresh. The next generation reloads the model, so
+    /// prefer `stopAfterCurrentImage()` when the current image is worth keeping.
     func cancelGeneration() {
         guard isGenerating else { return }
         eventTask?.cancel()
         eventTask = nil
         client?.stop()
         client = nil
-        pending = 0
-        inFlight.removeAll()
+        batch.reset()
         isGenerating = false
         progress = 0
         statusMessage = "Cancelled"
@@ -346,6 +352,16 @@ final class AppModel: ObservableObject {
             statusMessage = "Engine unavailable"
             errorMessage = "Couldn't restart the engine: \(error.localizedDescription)"
         }
+    }
+
+    /// Stop a batch *gracefully*: the image being rendered runs to completion and
+    /// lands in the gallery, and the images still queued are dropped. Unlike
+    /// `cancelGeneration()` this leaves the engine (and its loaded model) alone —
+    /// the queue lives here, not in the engine's stdin, so cancelling it is free.
+    func stopAfterCurrentImage() {
+        guard isGenerating, batch.canWindDown else { return }
+        batch.windDown()
+        statusMessage = "Finishing the current image, then stopping…"
     }
 
     /// Reload the installed-model list (View → Refresh Models, ⌘R).
@@ -497,9 +513,9 @@ final class AppModel: ObservableObject {
         isGenerating = true
         progress = 0
         errorMessage = nil
-        statusMessage = "Queued \(n) image\(n == 1 ? "" : "s")…"
 
         let dir = activeLibraryURL
+        var requests: [GenerationRequest] = []
         for i in 0..<n {
             let outURL = dir.appendingPathComponent(UUID().uuidString + ".png")
             let reqSeed: Int64?
@@ -535,17 +551,30 @@ final class AppModel: ObservableObject {
                 loras: (loras?.isEmpty ?? true) ? nil : loras,
                 output: outURL.path
             )
-            inFlight[outURL.path] = req
-            pending += 1
-            do {
-                try client.send(req)
-            } catch {
-                pending -= 1
-                inFlight[outURL.path] = nil
-                errorMessage = "Failed to queue request: \(error.localizedDescription)"
-            }
+            requests.append(req)
         }
-        if pending == 0 { isGenerating = false }
+        batch.start(requests)
+        statusMessage = "Queued \(n) image\(n == 1 ? "" : "s")…"
+        submitNextOrSettle(client: client)
+    }
+
+    /// Hand the next queued request to the engine; when the queue is exhausted
+    /// (or was wound down) the batch is finished. Only one request is in flight at
+    /// a time — see `BatchQueue` for why.
+    private func submitNextOrSettle(client: ServeClient) {
+        guard let req = batch.submitNext() else {
+            settle()
+            return
+        }
+        do {
+            try client.send(req)
+        } catch {
+            // The engine's stdin is gone; the rest of the batch can't be sent
+            // either, so fail the whole thing rather than retry per image.
+            errorMessage = "Failed to queue request: \(error.localizedDescription)"
+            batch.reset()
+            settle()
+        }
     }
 
     /// Upscale a gallery image with an installed ESRGAN model via a one-shot
@@ -722,26 +751,32 @@ final class AppModel: ObservableObject {
         case .load:
             statusMessage = ev.message ?? "Loading model…"
         case .progress:
-            if let p = ev.progress { progress = p }
-            if let m = ev.message { statusMessage = m }
+            if let p = ev.progress {
+                progress = batch.total > 1 ? batch.overallProgress(imageProgress: p) : p
+            }
+            if let m = ev.message { statusMessage = batchPrefixed(m) }
         case .done:
             if let out = ev.output { finishOne(outputPath: out, seed: ev.seed) }
         case .error:
             errorMessage = ev.message ?? "Generation failed."
-            // Free the exact in-flight entry — serve carries the failed request's
-            // output so it doesn't leak (an error otherwise has no key to remove by).
-            if let out = ev.output { inFlight.removeValue(forKey: out) }
-            // An errored request won't emit `done`; free one slot so a batch
-            // can still settle.
-            pending = max(0, pending - 1)
-            if pending == 0 { settle() }
+            // An errored request won't emit `done`, so settle it here — serve
+            // carries the failed request's output, letting a stray event that
+            // doesn't match the in-flight request be ignored.
+            batch.settleCurrent(output: ev.output)
+            advanceBatch()
         case .unknown:
             break
         }
     }
 
+    /// Prefix an engine progress message with the batch position ("3/50 — …").
+    /// Single-image generations get no prefix.
+    private func batchPrefixed(_ message: String) -> String {
+        batch.total > 1 ? "\(batch.currentIndex)/\(batch.total) — \(message)" : message
+    }
+
     private func finishOne(outputPath: String, seed: Int64?) {
-        let req = inFlight.removeValue(forKey: outputPath)
+        let req = batch.settleCurrent(output: outputPath)
         let url = URL(fileURLWithPath: outputPath)
         let size = PngMetadata.pixelSize(contentsOf: url)
         let image = GeneratedImage(
@@ -755,17 +790,26 @@ final class AppModel: ObservableObject {
         )
         results.insert(image, at: 0)
         if selection.isEmpty { selectOnly(image.id) }
-        pending = max(0, pending - 1)
-        progress = 0
-        if pending == 0 { settle() }
+        advanceBatch()
+    }
+
+    /// One image settled: submit the next, or finish the batch.
+    private func advanceBatch() {
+        progress = batch.total > 1 ? batch.overallProgress(imageProgress: 0) : 0
+        guard let client else {
+            settle()
+            return
+        }
+        submitNextOrSettle(client: client)
     }
 
     private func settle() {
+        let stoppedEarly = batch.isWindingDown
         isGenerating = false
-        // A settled batch has no in-flight requests; drop any orphans (e.g. an
-        // error event that carried no output) so `inFlight` tracks `pending`.
-        inFlight.removeAll()
-        statusMessage = "Done — " + libraryStatus(count: results.count)
+        progress = 0
+        batch.reset()
+        statusMessage =
+            (stoppedEarly ? "Stopped — " : "Done — ") + libraryStatus(count: results.count)
     }
 
     private func handleStreamEnded() {
@@ -773,10 +817,9 @@ final class AppModel: ObservableObject {
             isGenerating = false
             errorMessage = errorMessage ?? "The image-forge engine stopped unexpectedly."
         }
-        // The engine died: in-flight requests will never complete, so reset the
-        // bookkeeping rather than leave `pending`/`inFlight` stale.
-        pending = 0
-        inFlight.removeAll()
+        // The engine died: the in-flight request will never complete and the queue
+        // can't be sent, so reset rather than leave the batch state stale.
+        batch.reset()
         statusMessage = "Engine stopped"
         client = nil
     }

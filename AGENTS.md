@@ -39,6 +39,8 @@ Sources/ImageForgeGUI/
                        owner; generate(); load/install/removeModel; menu actions
   ServeClient.swift    resident `serve` driver + pure LineBuffer/ProgressBuffer;
                        one-shots: listModels / listCatalog / pull(runStreaming) / remove / upscale
+  BatchQueue.swift     pure, tested: client-side batch queue (one request in flight)
+                       + graceful wind-down + overall progress / "3/50" index
   BinaryResolver.swift pure, tested binary resolution
   LibraryStore.swift   pure, tested: named libraries + active id, JSON-persisted
   PngMetadata.swift    pure, tested: PNG tEXt/iTXt chunk parser (recover prompt/seed)
@@ -82,6 +84,14 @@ assets/                AppIcon-1024.png (→ AppIcon.icns at build)
   image. Each request gets a unique `output` path under
   `~/Library/Application Support/image-forge-gui/library/`; a `done` event maps
   back to its request by that path.
+- **Batches are queued app-side, one request in flight** (`BatchQueue`). serve
+  renders strictly serially (decode → render → decode), so submitting the whole
+  batch up front bought nothing and cost the ability to cancel it: once a request
+  is in the engine's pipe it can't be taken back. Holding the remainder in the app
+  makes `stopAfterCurrentImage()` (drop the queue, keep the engine + loaded model)
+  possible alongside `cancelGeneration()` (terminate + relaunch, killing the
+  render in progress). ComposerView asks which one only when they differ — i.e.
+  when images are still queued. Max batch is `ComposerView.maxCount` (50).
 - **Main-actor model.** `AppModel` is `@MainActor`; the event-consuming Task is
   `@MainActor` too, so `@Published` mutations are main-thread safe. The engine is
   stopped on `NSApplication.willTerminate` (serve exits on stdin EOF).
@@ -117,8 +127,9 @@ assets/                AppIcon-1024.png (→ AppIcon.icns at build)
 
 ## Status
 
-Working txt2img + **img2img** app: Composer (single/batch, **cancel** via
-terminate+relaunch serve, **Advanced** sampler/scheduler/clip-skip overrides,
+Working txt2img + **img2img** app: Composer (single/batch up to 50, **stop now**
+via terminate+relaunch serve *or* **finish current image** then drop the queue,
+**Advanced** sampler/scheduler/clip-skip overrides,
 model arch + rating with **Safe only**, **LoRA** stacking with per-LoRA weights
 filtered to the base model's arch, **Init image** drop/pick + strength,
 **ControlNet** arch-filtered pick + control image + strength + Canny, **License**

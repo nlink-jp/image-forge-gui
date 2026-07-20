@@ -23,13 +23,18 @@ macOS 14+ (Apple silicon).
   **strength** slider and a **Canny** toggle — arch-filtered, so an SDXL base gets
   the SDXL ControlNet and an SD1.5 base the SD1.5 one), core parameters
   (seed with a random toggle, steps, CFG, width/height, hires), an **Advanced**
-  section (sampler / scheduler / clip-skip overrides), and a batch **count**.
+  section (sampler / scheduler / clip-skip overrides), and a batch **count**
+  (1–50).
   A **License** section always shows the license of the base model, each LoRA, and
   the ControlNet in use, highlighting any with notable restrictions (non-commercial, no-derivatives,
   …); when a model requires attribution it also shows the **credit to include**
   (a copyable box) — the same text image-forge records in the image metadata.
-  Press **Generate** — it turns into **Cancel** (⌘.) while running, which stops
-  the batch immediately.
+  Press **Generate** — it turns into **Cancel** (⌘.) while running. With images
+  still queued you're asked how to stop: **Stop Now** kills the render in progress
+  (the engine restarts, so the next generation reloads the model), or **Finish
+  Current Image** lets it complete and lands it in the gallery, dropping only the
+  queue. A single image just stops. The status bar counts the batch
+  (**3/50 — …**) and the progress bar tracks the batch as a whole.
 - **Gallery** (main): a grid of the active library's PNGs. Click to select
   (**⌘-click** to toggle, **⇧-click** for a range); a bottom inspector shows the
   prompt, seed, and size for a lone selection, or a batch bar (**Delete** to Trash

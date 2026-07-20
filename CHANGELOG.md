@@ -3,6 +3,27 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+- **Choose how a batch stops.** Cancelling a batch that still has images queued
+  now asks: **Stop Now** (the previous behaviour — terminate the engine, discarding
+  the render in progress) or **Finish Current Image** (let the in-flight image
+  complete and land in the gallery, dropping only the queue). The graceful stop
+  leaves the engine and its loaded model alone, so nothing is thrown away and no
+  reload is paid. A single-image generation is unambiguous and still stops at once.
+- **Batch progress in the status bar** — `3/50 — <engine message>`, with the
+  progress bar tracking the batch as a whole rather than the current image.
+
+### Changed
+- **Batch count raised from 16 to 50.** Images render one at a time, so a bigger
+  batch is a longer unattended run rather than more memory pressure.
+- **Batch requests are now submitted one at a time** instead of being written to
+  the engine's stdin all at once. `image-forge serve` renders strictly serially,
+  so this costs nothing — and it is what makes the graceful stop possible: the
+  queue lives in the app, where it can still be cancelled, rather than in a pipe
+  the app can't take anything back from.
+
 ## [0.9.3] - 2026-07-19
 
 ### Fixed
