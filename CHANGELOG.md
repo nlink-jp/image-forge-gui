@@ -3,7 +3,11 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.11.0] - 2026-08-02
+
+### Changed
+- **Bundled CLI updated to image-forge v0.25.0**, which adds `models relocate` and
+  the `missing_files` signal this release depends on.
 
 ### Fixed
 - **Models that can't load are no longer offered.** After moving image-forge's
