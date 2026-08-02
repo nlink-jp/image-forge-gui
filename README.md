@@ -50,7 +50,7 @@ macOS 14+ (Apple silicon).
   **library switcher** (folder menu) in the header row switches between named
   libraries, adds a new one (any folder), renames the active one (label only — the
   folder on disk is untouched), reveals it, or removes it from the list.
-- **Manage Models** (View → Manage Models…, ⌘⇧M — or the "Get your first model…"
+- **Manage Models** (ImageForgeGUI → Manage Models…, ⌘⇧M — or the "Get your first model…"
   button that replaces the model picker on a fresh install): browse the curated
   **catalog** (architecture, content rating, license, recommended RAM) and
   **install** a model with a live download progress bar, or **remove** an installed
@@ -59,7 +59,16 @@ macOS 14+ (Apple silicon).
   confirmation before installing. Each row has a **compass/Safari button that opens
   the model's source page** — its Civitai model page or Hugging Face repo — so you
   can read the model card without searching for it (the URL comes from the CLI's
-  `page_url`).
+  `page_url`). A model whose weight files are gone is flagged **missing files**
+  here, with the absent paths and the fix — it stays listed so you can see and
+  remove it, but it is kept out of the Composer's pickers (see below).
+- **Models that can't load are never offered.** If you point image-forge's
+  `models_dir` at a new location without re-pointing its registry — or the volume
+  holding your models isn't mounted — the affected models disappear from the model,
+  LoRA, ControlNet, and upscaler pickers, and the Model section explains why:
+  move the files and run `image-forge models relocate --apply`, or mount the volume.
+  Offering a model that fails at load time is what made this confusing before
+  (image-forge ADR-0008).
 - **Status bar**: a live progress bar and status message driven by the engine's
   `ready` / `load` / `progress` / `done` / `error` events; errors surface inline.
 
