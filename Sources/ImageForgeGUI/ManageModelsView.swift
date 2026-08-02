@@ -109,6 +109,17 @@ struct ManageModelsView: View {
                         Label("license", systemImage: "exclamationmark.triangle")
                             .font(.caption2).foregroundStyle(.orange)
                     }
+                    if m.isMissing { badge("missing files", color: .red) }
+                }
+                // A registered model whose weights are gone stays listed here (so it
+                // can be seen and removed) but is kept out of the Composer's pickers.
+                // Name the files and the fix rather than leaving a bare badge.
+                if m.isMissing {
+                    Text("Missing: \((m.missingFiles ?? []).joined(separator: ", "))")
+                        .font(.caption2).foregroundStyle(.secondary)
+                        .lineLimit(2).truncationMode(.middle)
+                    Text("Moved the models directory? Run `image-forge models relocate --apply`.")
+                        .font(.caption2).foregroundStyle(.secondary)
                 }
             }
             Spacer()

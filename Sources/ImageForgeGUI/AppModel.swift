@@ -83,21 +83,28 @@ final class AppModel: ObservableObject {
     // set this to present it; GalleryView owns the `.sheet`.
     @Published var upscaleRequest: GeneratedImage?
 
+    /// Installed models whose weight files are gone — a relocated `models_dir`
+    /// whose registry was never re-pointed, or an unmounted volume (image-forge
+    /// ADR-0008). They stay listed in Manage Models (so the problem is visible and
+    /// fixable) but are kept out of every picker below: offering a model that
+    /// cannot load is what made this failure so confusing in the first place.
+    var missingModels: [ModelInfo] { models.filter(\.isMissing) }
+
     /// Installed ESRGAN upscaler models (`kind == "upscaler"`), for the Upscale sheet.
-    var upscalerModels: [ModelInfo] { models.filter { ($0.kind ?? "") == "upscaler" } }
+    var upscalerModels: [ModelInfo] { models.filter { ($0.kind ?? "") == "upscaler" && !$0.isMissing } }
 
     /// Installed LoRAs compatible with a base model's architecture. A LoRA is
     /// bound to the arch it was trained against, so an SDXL LoRA must not be
     /// offered for an SD1.5 base (ADR-0006).
     func loras(forArch baseArch: String) -> [ModelInfo] {
-        models.filter { $0.isLoRA && $0.matchesArch(baseArch) }
+        models.filter { $0.isLoRA && !$0.isMissing && $0.matchesArch(baseArch) }
     }
 
     /// Installed ControlNets compatible with a base model's architecture — bound to
     /// the base arch exactly like a LoRA (ADR-0006). The catalog ships SD1.5 and SDXL
     /// canny ControlNets; this is empty for an arch with none installed.
     func controlNetModels(forArch baseArch: String) -> [ModelInfo] {
-        models.filter { $0.isControlNet && $0.matchesArch(baseArch) }
+        models.filter { $0.isControlNet && !$0.isMissing && $0.matchesArch(baseArch) }
     }
 
     /// The architecture of an installed model, or "" if unknown.

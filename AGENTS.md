@@ -47,7 +47,7 @@ Sources/ImageForgeGUI/
   Models.swift         GenerationRequest / ServeEvent / ModelInfo / CatalogEntry / GeneratedImage
 Tests/ImageForgeGUITests/
   GenerationRequestTests / ServeEventTests (+ LineBufferTests) / ManageModelsTests /
-  ModelInfoTests / BinaryResolverTests / PngMetadataTests / LibraryStoreTests
+  ModelInfoTests / MissingModelTests / BinaryResolverTests / PngMetadataTests / LibraryStoreTests
 Info.plist             normal app (NO LSUIElement); graphics-design category
 scripts/               codesign-darwin-app.sh, notarize-darwin-app.sh, make-icns.sh
 assets/                AppIcon-1024.png (→ AppIcon.icns at build)
@@ -79,6 +79,15 @@ assets/                AppIcon-1024.png (→ AppIcon.icns at build)
   fraction. The Manage Models window is opened via the `manageModelsTick`
   → `openWindow("manage-models")` pattern (Commands can't call `openWindow`
   directly; ContentView observes the tick), mirroring `newGenerationTick`.
+- **A model with missing weight files is never offered** (image-forge ADR-0008).
+  `ModelInfo.missingFiles` decodes `missing_files` from `models list --json`;
+  `isMissing` gates `ComposerView.diffusionModels` and `AppModel`'s
+  `upscalerModels` / `loras(forArch:)` / `controlNetModels(forArch:)`. Absent key
+  (older CLI) = healthy, so the app degrades cleanly. `syncSelectedModel` already
+  re-picks when the selection leaves `diffusionModels`, so a model going missing
+  self-corrects. Manage Models deliberately still lists them (badge + paths) —
+  they must be visible to be fixed or removed. `missingModelsNotice` in the Model
+  section explains the disappearance; without it the models just vanish.
 - **Seed batching.** Random-seed batches send `seed = -1` per image (the engine
   randomizes and reports the seed back on `done`); a fixed seed increments per
   image. Each request gets a unique `output` path under

@@ -96,7 +96,9 @@ struct ComposerView: View {
                                      "smoothstep", "beta"]
 
     private var diffusionModels: [ModelInfo] {
-        model.models.filter { $0.isDiffusion && (!safeOnly || ($0.rating ?? "") == "safe") }
+        model.models.filter {
+            $0.isDiffusion && !$0.isMissing && (!safeOnly || ($0.rating ?? "") == "safe")
+        }
     }
 
     /// Picker label: "name — ARCH", plus the catalog content rating for non-safe
@@ -156,6 +158,8 @@ struct ComposerView: View {
                     }
                     .help("Browse the catalog and install a model")
                 }
+
+                missingModelsNotice
             }
 
             Section("LoRA") {
@@ -661,6 +665,28 @@ struct ComposerView: View {
                 guard let u = urls.first(where: isImageFile) else { return false }
                 controlImageURL = u
                 return true
+            }
+        }
+    }
+
+    /// Explains why installed models are absent from the picker: their weight
+    /// files are gone (image-forge ADR-0008), almost always because `models_dir`
+    /// was pointed at a new location without re-pointing the registry, or because
+    /// the volume holding them isn't mounted. Without this the models simply
+    /// vanish from the list with no reason given. Renders nothing when all is well.
+    @ViewBuilder private var missingModelsNotice: some View {
+        let missing = model.missingModels
+        if !missing.isEmpty {
+            VStack(alignment: .leading, spacing: 4) {
+                Label("\(missing.count) installed model(s) can't be loaded",
+                      systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                Text("Their weight files are missing: \(missing.map(\.name).sorted().joined(separator: ", ")). "
+                     + "If you moved the models directory, re-point the registry with "
+                     + "`image-forge models relocate --apply`; if they're on an external volume, mount it.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }

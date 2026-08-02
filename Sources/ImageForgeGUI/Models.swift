@@ -106,8 +106,18 @@ struct ModelInfo: Codable, Identifiable, Equatable {
     /// (json: page_url). The CLI derives it from the catalog; a front-end offers
     /// an "open model page" link. Absent for a user-local model not in the catalog.
     var pageURL: String?
+    /// Recorded weight files that are absent on disk (json: missing_files;
+    /// image-forge ADR-0008). Non-empty means the model is registered but cannot
+    /// be loaded — usually `models_dir` was changed without re-pointing the
+    /// registry (`image-forge models relocate`), or its volume isn't mounted.
+    /// Absent from an older CLI, which is why it decodes as nil = healthy.
+    var missingFiles: [String]?
 
     var id: String { name }
+
+    /// Whether this model's weight files are gone, so it must not be offered for
+    /// generation. The Composer filters on it and Manage Models flags it.
+    var isMissing: Bool { !(missingFiles ?? []).isEmpty }
 
     /// The source page as a URL, if one is known and well-formed.
     var pageLink: URL? {
@@ -146,6 +156,7 @@ struct ModelInfo: Codable, Identifiable, Equatable {
         case licenseFlags = "license_flags"
         case attribution
         case pageURL = "page_url"
+        case missingFiles = "missing_files"
     }
 
     /// Decode the installed-model array from `image-forge models list --json`.

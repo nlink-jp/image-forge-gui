@@ -3,6 +3,19 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+- **Models that can't load are no longer offered.** After moving image-forge's
+  `models_dir` without re-pointing its registry, Manage Models still listed every
+  model as installed while generation failed against the old directory — the CLI
+  reported registry state without checking the files, and the app believed it. The
+  app now reads `missing_files` from `models list --json` (image-forge ADR-0008,
+  requires the matching CLI) and keeps such models out of the model, LoRA,
+  ControlNet, and upscaler pickers. The Model section says how many can't load and
+  what to do (`image-forge models relocate --apply`, or mount the volume), and
+  Manage Models flags each one with its absent paths so it can be seen and removed.
+
 ## [0.10.0] - 2026-07-20
 
 ### Added
