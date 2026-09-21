@@ -3,6 +3,17 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- **The bundled-CLI check compares exactly, not as a substring.** `CLI_VERSION`
+  was matched with `grep -F`, so a development build of the pinned version
+  (`v0.3.1-3-g<sha>-dirty` against `v0.3.1`) passed, a pin that was not a release
+  tag passed, and an empty pin passed everything — `grep -F ""` matches any
+  output. The gate now requires the CLI to be present, the pin to be a release tag,
+  and the version the binary reports to equal it.
+
 ## [0.11.1] - 2026-09-21
 
 ### Changed

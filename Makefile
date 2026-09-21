@@ -14,7 +14,9 @@ APP_BUNDLE  := $(DIST_DIR)/$(APP_NAME).app
 # .app is self-contained. Override CLI_BIN to point at a freshly built binary;
 # if it's missing, the app falls back to $IMAGE_FORGE_BIN / ~/bin/image-forge /
 # PATH at runtime (see BinaryResolver).
-CLI_BIN ?= ../image-forge/dist/image-forge
+# The release binary first: the CLI's `make package` leaves only
+# dist/image-forge-darwin-arm64, `make build` leaves dist/image-forge.
+CLI_BIN ?= $(firstword $(wildcard ../image-forge/dist/image-forge-darwin-arm64 ../image-forge/dist/image-forge))
 
 # The CLI version this app must ship. The app's behaviour *is* the CLI's — the
 # catalog it shows, the licences it reports, the models it can pull — so a
@@ -101,12 +103,17 @@ verify-release:
 			echo "verify-release: FAIL — linked SDK is $$sdk, expected $(MACOS_SDK)."; \
 			echo "  macOS draws an app linked against an old SDK with the previous window chrome."; \
 			exit 1; }
-	@out=$$("$(APP_BUNDLE)/Contents/Resources/image-forge" --version 2>/dev/null | head -1); \
-		printf '%s\n' "$$out" | grep -qF "$(CLI_VERSION)" || { \
-			echo "verify-release: FAIL — the bundled CLI reports \"$$out\", not $(CLI_VERSION)."; \
-			echo "  The app's behaviour is the CLI's; rebuild with CLI_BIN pointing at a $(CLI_VERSION) build."; \
-			exit 1; }
-	@echo "verify-release: OK ($(VERSION) — marker present, ticket stapled, linked against SDK $(MACOS_SDK), bundled CLI $(CLI_VERSION))"
+	@cli="$(APP_BUNDLE)/Contents/Resources/image-forge"; \
+		test -x "$$cli" || { echo "verify-release: FAIL — no bundled CLI at $$cli (build the CLI first; see CLI_BIN)"; exit 1; }; \
+		echo "$(CLI_VERSION)" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$$' || { \
+			echo "verify-release: FAIL — CLI_VERSION '$(CLI_VERSION)' is not a release tag (vX.Y.Z)."; exit 1; }; \
+		v=$$("$$cli" --version 2>/dev/null | head -1 | awk '{print $$NF}'); \
+		test "$$v" = "$(CLI_VERSION)" || { \
+			echo "verify-release: FAIL — bundled CLI reports '$$v', not $(CLI_VERSION)."; \
+			echo "  Bundle the release build of the CLI at its tag (no -dirty, no -N-g<sha>): this app's"; \
+			echo "  behaviour is the CLI's, and a stale or development CLI would ship under this version."; exit 1; }; \
+		echo "verify-release: bundled CLI $$v"
+	@echo "verify-release: OK ($(VERSION) — marker present, ticket stapled, linked against SDK $(MACOS_SDK))"
 
 ## test: run tests
 test:
