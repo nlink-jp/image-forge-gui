@@ -16,6 +16,17 @@ APP_BUNDLE  := $(DIST_DIR)/$(APP_NAME).app
 # PATH at runtime (see BinaryResolver).
 CLI_BIN ?= ../image-forge/dist/image-forge
 
+# The CLI version this app must ship. The app's behaviour *is* the CLI's — the
+# catalog it shows, the licences it reports, the models it can pull — so a
+# bundle built against a stale binary ships stale behaviour with a fresh version
+# number. v0.27.0 is the release that corrected a model licence that said
+# commercial use was permitted when it was not; a GUI user cannot get that fix
+# by updating the CLI, because a release .app resolves its bundled copy first
+# and ignores $IMAGE_FORGE_BIN (see BinaryResolver). verify-release therefore
+# refuses a bundle whose binary does not report this version. Bump it in the
+# same commit that bundles a newer CLI.
+CLI_VERSION ?= v0.27.0
+
 # macOS Developer ID signing / notarization (see nlink-jp/.github CONVENTIONS.md
 # §Code Signing → GUI apps). Pure SwiftUI/AppKit needs no JIT entitlements —
 # Hardened Runtime alone suffices. --deep also signs the bundled CLI binary.
@@ -90,7 +101,12 @@ verify-release:
 			echo "verify-release: FAIL — linked SDK is $$sdk, expected $(MACOS_SDK)."; \
 			echo "  macOS draws an app linked against an old SDK with the previous window chrome."; \
 			exit 1; }
-	@echo "verify-release: OK ($(VERSION) — marker present, ticket stapled, linked against SDK $(MACOS_SDK))"
+	@out=$$("$(APP_BUNDLE)/Contents/Resources/image-forge" --version 2>/dev/null | head -1); \
+		printf '%s\n' "$$out" | grep -qF "$(CLI_VERSION)" || { \
+			echo "verify-release: FAIL — the bundled CLI reports \"$$out\", not $(CLI_VERSION)."; \
+			echo "  The app's behaviour is the CLI's; rebuild with CLI_BIN pointing at a $(CLI_VERSION) build."; \
+			exit 1; }
+	@echo "verify-release: OK ($(VERSION) — marker present, ticket stapled, linked against SDK $(MACOS_SDK), bundled CLI $(CLI_VERSION))"
 
 ## test: run tests
 test:

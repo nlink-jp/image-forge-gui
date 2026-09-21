@@ -3,6 +3,44 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- **Bundled CLI updated to image-forge v0.27.0, which corrects a model licence
+  this app was showing.** `anima-turbo` was reported as "NVIDIA Open Model
+  License: commercial OK" — the terms of the base model Anima was trained from —
+  while the weights it downloads are CircleStone Labs' Non-Commercial License
+  v1.2: non-commercial, non-production use only (generated outputs may still be
+  used commercially). Manage Models reads those terms from the bundled CLI's
+  catalog, so the app was making the wrong claim, and **updating the CLI
+  separately could not fix it**: a release .app resolves its bundled copy first
+  and ignores `$IMAGE_FORGE_BIN`. Also corrects `controlnet-canny-sd15`
+  (OpenRAIL, not CreativeML OpenRAIL-M) and states both licence statements that
+  exist for `illustrious-xl-v1`.
+
+### Fixed
+
+- **The release build is linked against the current SDK again.** macOS reads
+  `LC_BUILD_VERSION`'s `sdk` field to decide which generation of window chrome
+  to draw an app with, and since the Xcode 27 / Swift 6.4 toolchain `swift
+  build` stamps that field with the deployment target instead — so a build made
+  here would have declared an SDK years old and rendered with the previous
+  design (square window corners). `make build` now passes `-platform_version`
+  explicitly, with the deployment target read from `Package.swift` so it is
+  stated once, and `make verify-release` refuses a bundle whose linked SDK is
+  not the current one. Nothing published was affected: every earlier release
+  predates the toolchain update.
+- **Release packaging is gated on a notarization marker**, written only on
+  `Accepted and stapled`, so the notarize script's fail-open path (there so a
+  contributor without credentials can still build) cannot reach an upload.
+- **`make verify-release` now checks which CLI is inside the bundle.** It
+  verified the notarization marker, the stapled ticket, the release zip and the
+  linked SDK, but not the one thing that decides what the app does: nothing
+  compared `Contents/Resources/image-forge --version` against the CLI version
+  the release claims to ship. A bundle built against a stale binary passed every
+  gate. `CLI_VERSION` in the Makefile now states it and the gate enforces it.
+
 ## [0.11.0] - 2026-08-02
 
 ### Changed
