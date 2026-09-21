@@ -3,9 +3,22 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.12.0] - 2026-09-22
+
+### Changed
+
+- **Bundles image-forge v0.28.0.** A LoRA or ControlNet made for another
+  architecture than the model is refused before anything loads, `--arch` is
+  validated, and the hires upscaler default is described correctly. See the
+  CLI's CHANGELOG.
 
 ### Fixed
+
+- **An SD1.5 LoRA could vanish from the Composer.** LoRAs and ControlNets were
+  filtered by the model's recorded architecture, which for a model imported
+  without `--arch` is a guess from its name — SDXL whenever the name matches
+  nothing. The Composer now hides one only when both architectures are facts
+  (the CLI's `arch_trusted`), the same rule the CLI applies before a render.
 
 - **The bundled-CLI check compares exactly, not as a substring.** `CLI_VERSION`
   was matched with `grep -F`, so a development build of the pinned version

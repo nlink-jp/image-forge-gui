@@ -27,7 +27,7 @@ CLI_BIN ?= $(firstword $(wildcard ../image-forge/dist/image-forge-darwin-arm64 .
 # and ignores $IMAGE_FORGE_BIN (see BinaryResolver). verify-release therefore
 # refuses a bundle whose binary does not report this version. Bump it in the
 # same commit that bundles a newer CLI.
-CLI_VERSION ?= v0.27.0
+CLI_VERSION ?= v0.28.0
 
 # macOS Developer ID signing / notarization (see nlink-jp/.github CONVENTIONS.md
 # §Code Signing → GUI apps). Pure SwiftUI/AppKit needs no JIT entitlements —
