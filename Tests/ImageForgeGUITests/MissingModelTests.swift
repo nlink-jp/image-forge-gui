@@ -65,7 +65,7 @@ final class MissingModelTests: XCTestCase {
         XCTAssertEqual(app.missingModels.map(\.name).sorted(),
                        ["base-gone", "cn-gone", "lora-gone", "up-gone"])
         XCTAssertEqual(app.upscalerModels.map(\.name), ["up-ok"])
-        XCTAssertEqual(app.loras(forArch: "sdxl").map(\.name), ["lora-ok"])
-        XCTAssertEqual(app.controlNetModels(forArch: "sdxl").map(\.name), ["cn-ok"])
+        XCTAssertEqual(app.loras(forBase: "base-ok").map(\.name), ["lora-ok"])
+        XCTAssertEqual(app.controlNetModels(forBase: "base-ok").map(\.name), ["cn-ok"])
     }
 }

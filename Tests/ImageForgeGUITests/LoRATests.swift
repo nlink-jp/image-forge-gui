@@ -21,10 +21,21 @@ final class LoRATests: XCTestCase {
         XCTAssertFalse(models[4].isLoRA)
     }
 
-    func testArchMatchIsCaseInsensitive() {
-        XCTAssertTrue(models[1].matchesArch("SDXL"))
-        XCTAssertTrue(models[1].matchesArch("sdxl"))
-        XCTAssertFalse(models[1].matchesArch("sd15"))
+    /// Only facts are compared, as the CLI does before a render (image-forge
+    /// ADR-0006). A base imported without --arch carries a guessed arch, and
+    /// filtering on it hid every compatible LoRA.
+    func testCompatibilityComparesOnlyFacts() {
+        let base = ModelInfo(name: "base", arch: "sdxl", archTrusted: true, path: "/m/b", kind: nil)
+        let guessedBase = ModelInfo(name: "ds8", arch: "sdxl", archTrusted: false, path: "/m/d", kind: nil)
+        let xl = ModelInfo(name: "l-xl", arch: "SDXL", archTrusted: true, path: "/m/x", kind: "lora")
+        let sd15 = ModelInfo(name: "l-15", arch: "sd15", archTrusted: true, path: "/m/1", kind: "lora")
+        let guessed15 = ModelInfo(name: "l-g", arch: "sd15", archTrusted: false, path: "/m/g", kind: "lora")
+        let fromOldCLI = ModelInfo(name: "l-o", arch: "sd15", path: "/m/o", kind: "lora")
+        XCTAssertTrue(xl.isCompatible(withBase: base))        // case-insensitive
+        XCTAssertFalse(sd15.isCompatible(withBase: base))     // two facts that differ
+        XCTAssertTrue(guessed15.isCompatible(withBase: base)) // a guess withholds nothing
+        XCTAssertTrue(fromOldCLI.isCompatible(withBase: base))
+        XCTAssertTrue(sd15.isCompatible(withBase: guessedBase))
     }
 
     func testPayloadUsesResolvedPathAndWeight() {

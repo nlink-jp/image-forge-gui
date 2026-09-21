@@ -88,6 +88,10 @@ struct ServeEvent: Decodable, Equatable {
 struct ModelInfo: Codable, Identifiable, Equatable {
     var name: String
     var arch: String
+    /// Whether `arch` is a fact — the catalog's own, or given with `--arch` —
+    /// rather than the CLI's guess from the name (json: arch_trusted; image-forge
+    /// ADR-0006). Absent from an older CLI, which reads as a guess.
+    var archTrusted: Bool?
     var rating: String?
     var license: String?
     var path: String?
@@ -144,13 +148,19 @@ struct ModelInfo: Codable, Identifiable, Equatable {
     /// A ControlNet model, bound to the base `arch` it was trained against.
     var isControlNet: Bool { kind == "controlnet" }
 
-    /// Whether this auxiliary model is compatible with a base model's architecture.
-    func matchesArch(_ baseArch: String) -> Bool {
-        arch.caseInsensitiveCompare(baseArch) == .orderedSame
+    /// Whether this auxiliary model may be offered for `base`: withheld only when
+    /// both architectures are facts and differ — the rule the CLI enforces before a
+    /// render (image-forge ADR-0006). A guess withholds nothing: a base imported
+    /// without `--arch` is recorded as a guessed SDXL whatever it is, and filtering
+    /// on that hid every SD1.5 LoRA.
+    func isCompatible(withBase base: ModelInfo) -> Bool {
+        guard base.archTrusted == true, archTrusted == true else { return true }
+        return arch.caseInsensitiveCompare(base.arch) == .orderedSame
     }
 
     enum CodingKeys: String, CodingKey {
         case name, arch, rating, license, path, kind
+        case archTrusted = "arch_trusted"
         case inCatalog = "in_catalog"
         case triggerWords = "trigger_words"
         case licenseFlags = "license_flags"

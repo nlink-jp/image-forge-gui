@@ -6,23 +6,25 @@ import XCTest
 /// carries the resolved path (like LoRAs) so an older bundled CLI still works.
 final class ControlNetTests: XCTestCase {
     private let models: [ModelInfo] = [
-        ModelInfo(name: "sd15-emaonly", arch: "sd15", path: "/m/sd15.safetensors", kind: nil),
-        ModelInfo(name: "juggernaut-xl", arch: "sdxl", path: "/m/jug.safetensors", kind: nil),
-        ModelInfo(name: "controlnet-canny-sd15", arch: "sd15", path: "/m/cn15.safetensors", kind: "controlnet"),
-        ModelInfo(name: "canny-sdxl", arch: "sdxl", path: "/m/cnxl.safetensors", kind: "controlnet"),
-        ModelInfo(name: "lcm-lora-sd15", arch: "sd15", path: "/m/lcm15.safetensors", kind: "lora"),
+        ModelInfo(name: "sd15-emaonly", arch: "sd15", archTrusted: true, path: "/m/sd15.safetensors", kind: nil),
+        ModelInfo(name: "juggernaut-xl", arch: "SDXL", archTrusted: true, path: "/m/jug.safetensors", kind: nil),
+        ModelInfo(name: "flux-base", arch: "flux", archTrusted: true, path: "/m/flux.safetensors", kind: nil),
+        ModelInfo(name: "controlnet-canny-sd15", arch: "sd15", archTrusted: true, path: "/m/cn15.safetensors", kind: "controlnet"),
+        ModelInfo(name: "canny-sdxl", arch: "sdxl", archTrusted: true, path: "/m/cnxl.safetensors", kind: "controlnet"),
+        ModelInfo(name: "lcm-lora-sd15", arch: "sd15", archTrusted: true, path: "/m/lcm15.safetensors", kind: "lora"),
     ]
 
     /// ControlNets are arch-bound like LoRAs — an SDXL base is offered only SDXL
-    /// ControlNets, never the SD1.5 one (ADR-0006). This is the exact predicate
-    /// `AppModel.controlNetModels(forArch:)` filters on.
+    /// ControlNets, never the SD1.5 one (ADR-0006), when both arches are facts.
+    /// This is `AppModel.controlNetModels(forBase:)` itself.
+    @MainActor
     func testControlNetIsArchBoundLikeLoRA() {
-        func controlNets(forArch a: String) -> [String] {
-            models.filter { $0.isControlNet && $0.matchesArch(a) }.map(\.name)
-        }
-        XCTAssertEqual(controlNets(forArch: "sd15"), ["controlnet-canny-sd15"])
-        XCTAssertEqual(controlNets(forArch: "SDXL"), ["canny-sdxl"]) // case-insensitive
-        XCTAssertTrue(controlNets(forArch: "flux").isEmpty)
+        let app = AppModel()
+        app.models = models
+        XCTAssertEqual(app.controlNetModels(forBase: "sd15-emaonly").map(\.name), ["controlnet-canny-sd15"])
+        XCTAssertEqual(app.controlNetModels(forBase: "juggernaut-xl").map(\.name), ["canny-sdxl"]) // case-insensitive
+        XCTAssertTrue(app.controlNetModels(forBase: "flux-base").isEmpty)
+        XCTAssertTrue(app.controlNetModels(forBase: nil).isEmpty)
     }
 
     func testControlNetPathResolvesSelectedName() {

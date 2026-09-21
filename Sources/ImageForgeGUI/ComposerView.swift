@@ -291,7 +291,7 @@ struct ComposerView: View {
 
     /// Installed LoRAs compatible with the selected base model.
     private var compatibleLoRAs: [ModelInfo] {
-        selectedModel == nil ? [] : model.loras(forArch: selectedArch)
+        model.loras(forBase: selectedModel)
     }
 
     /// Compatible LoRAs not already stacked (so each is offered once).
@@ -598,7 +598,7 @@ struct ComposerView: View {
 
     /// Installed ControlNets compatible with the selected base model (arch-bound).
     private var compatibleControlNets: [ModelInfo] {
-        selectedModel == nil ? [] : model.controlNetModels(forArch: selectedArch)
+        model.controlNetModels(forBase: selectedModel)
     }
 
     /// The ControlNet section: pick an arch-compatible ControlNet + a control image

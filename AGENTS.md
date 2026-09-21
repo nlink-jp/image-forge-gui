@@ -92,7 +92,7 @@ assets/                AppIcon-1024.png (→ AppIcon.icns at build)
 - **A model with missing weight files is never offered** (image-forge ADR-0008).
   `ModelInfo.missingFiles` decodes `missing_files` from `models list --json`;
   `isMissing` gates `ComposerView.diffusionModels` and `AppModel`'s
-  `upscalerModels` / `loras(forArch:)` / `controlNetModels(forArch:)`. Absent key
+  `upscalerModels` / `loras(forBase:)` / `controlNetModels(forBase:)`. Absent key
   (older CLI) = healthy, so the app degrades cleanly. `syncSelectedModel` already
   re-picks when the selection leaves `diffusionModels`, so a model going missing
   self-corrects. Manage Models deliberately still lists them (badge + paths) —
@@ -150,7 +150,8 @@ Working txt2img + **img2img** app: Composer (single/batch up to 50, **stop now**
 via terminate+relaunch serve *or* **finish current image** then drop the queue,
 **Advanced** sampler/scheduler/clip-skip overrides,
 model arch + rating with **Safe only**, **LoRA** stacking with per-LoRA weights
-filtered to the base model's arch, **Init image** drop/pick + strength,
+filtered to the base model's arch (only when both arches are facts, `arch_trusted` — the CLI's
+rule; `ModelInfo.isCompatible`), **Init image** drop/pick + strength,
 **ControlNet** arch-filtered pick + control image + strength + Canny, **License**
 panel showing the base/LoRA/ControlNet license + the attribution credit) →
 Gallery (**lightbox**, **multi-select** ⌘/⇧-click with batch **Delete (Trash) /

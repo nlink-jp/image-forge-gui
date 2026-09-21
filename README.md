@@ -12,8 +12,10 @@ macOS 14+ (Apple silicon).
 - **Composer** (left): prompt / negative (resizable editors), a model picker
   showing each model's architecture and catalog content rating with a **Safe
   only** toggle (hide questionable / explicit), a **LoRA** section (stack
-  installed LoRAs with per-LoRA weight sliders; only architecture-compatible ones
-  are offered; **trigger words are shown and auto-inserted into the prompt**), an
+  installed LoRAs with per-LoRA weight sliders; one made for another architecture
+  than the model is not offered when both architectures are facts — a guessed
+  architecture hides nothing, the rule the CLI applies before a render;
+  **trigger words are shown and auto-inserted into the prompt**), an
   **Init image** section for
   **img2img** (drop or choose an image + a **strength** slider) with an optional
   **inpaint mask** — paint the regions to regenerate right on the init image
