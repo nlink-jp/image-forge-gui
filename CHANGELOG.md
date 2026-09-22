@@ -3,6 +3,14 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.12.3] - 2026-09-22
+
+### Changed
+
+- **Bundles image-forge v0.29.2.** Its change is a dependency update
+  (nlink-jp/pathguard v0.3.0) with no behaviour change; the app behaves as
+  before.
+
 ## [0.12.2] - 2026-09-22
 
 ### Changed
