@@ -3,6 +3,16 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.12.1] - 2026-09-22
+
+### Changed
+
+- **Bundles image-forge v0.29.0.** Its changes are to the MCP server — path
+  judgement moved to nlink-jp/pathguard, raw model paths and workspace
+  directories judged — which this app does not use (it drives the CLI's `serve`
+  loop). What reaches the app: a relative `XDG_DATA_HOME` or `XDG_CONFIG_HOME`
+  is now ignored, as the XDG spec says. See the CLI's CHANGELOG.
+
 ## [0.12.0] - 2026-09-22
 
 ### Changed
