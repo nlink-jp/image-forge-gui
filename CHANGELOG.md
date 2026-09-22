@@ -3,6 +3,16 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.12.2] - 2026-09-22
+
+### Changed
+
+- **Bundles image-forge v0.29.1.** Its change is to the MCP server — an input
+  image in a workspace is judged before anything looks for it, so whether a
+  file exists no longer changes the answer — which this app does not use (it
+  drives the CLI's `serve` loop). Nothing changes for the app. See the CLI's
+  CHANGELOG.
+
 ## [0.12.1] - 2026-09-22
 
 ### Changed
