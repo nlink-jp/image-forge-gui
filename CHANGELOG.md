@@ -5,6 +5,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.12.4] - 2026-11-04
+
+### Changed
+
+- **Bundles image-forge v0.29.3.** Its change is to the MCP server — checking
+  that `work_dir` is writable no longer creates a probe file (nlink-jp/pathguard
+  v0.3.1) — which this app does not use (it drives the CLI's `serve` loop).
+  Nothing changes for the app. See the CLI's CHANGELOG.
+
 ### Fixed
 
 - The release zip no longer carries AppleDouble (`._*`) entries: the app is
