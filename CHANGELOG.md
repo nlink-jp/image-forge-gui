@@ -3,7 +3,16 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.13.0] - 2026-11-04
+
+### Changed
+
+- **Bundles image-forge v0.30.0, which reads `config.toml` strictly.** An
+  unknown key in the CLI's config file is now an error that names it, and
+  `[mcp] workspace_root` is refused by name. The CLI's `serve` loop, which this
+  app drives, now stops on an invalid config instead of running without its
+  `models_dir`; the app shows the CLI's error. Correct or remove the key it
+  names. See the CLI's CHANGELOG.
 
 ## [0.12.4] - 2026-11-04
 
