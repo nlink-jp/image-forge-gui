@@ -3,6 +3,22 @@
 All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.14.0] - 2026-11-13
+
+### Changed
+
+- **Bundles image-forge v0.31.0.** Manage Models now offers **Qwen-Image-2.1**
+  (`qwen-image-2.1`, text-to-image) and an anime-style LoRA for it
+  (`anime-fusal-qwen-image-2.1`, behind the NSFW opt-in). Both are under the
+  Qwen Research License — research and evaluation only; the License panel
+  shows the terms and the attribution. A Qwen-Image-2.1 render takes about 20
+  minutes at its defaults on an M2 Max, and a size above 2,097,152 pixels
+  (1440x1440), or a hires pass that would exceed it, is refused with the CLI's
+  message, because the model renders a broken image there.
+- The bundled diffusion runtime (stable-diffusion.cpp) is updated. Existing
+  models render as before; FLUX output is visibly sharper at the same seed and
+  FLUX uses less memory. See the CLI's CHANGELOG.
+
 ## [0.13.0] - 2026-11-04
 
 ### Changed
